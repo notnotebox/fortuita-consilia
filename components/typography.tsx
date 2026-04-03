@@ -37,7 +37,10 @@ export function H3({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("scroll-m-20 text-2xl font-semibold tracking-tight", className)}
+      className={cn(
+        "scroll-m-20 text-2xl font-semibold tracking-tight",
+        className,
+      )}
       {...props}
     />
   );
@@ -49,7 +52,10 @@ export function H4({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h4
-      className={cn("scroll-m-20 text-xl font-semibold tracking-tight", className)}
+      className={cn(
+        "scroll-m-20 text-xl font-semibold tracking-tight",
+        className,
+      )}
       {...props}
     />
   );
@@ -61,7 +67,7 @@ export function P({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-base leading-7 [&:not(:first-child)]:mt-6", className)}
+      className={cn("leading-7 [&:not(:first-child)]:mt-6", className)}
       {...props}
     />
   );
@@ -87,21 +93,33 @@ export function Small({
   className,
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <small className={cn("text-sm font-medium leading-none", className)} {...props} />;
+  return (
+    <small
+      className={cn("text-sm font-medium leading-none", className)}
+      {...props}
+    />
+  );
 }
 
 export function Muted({
   className,
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm text-muted-foreground", className)} {...props} />;
+  return (
+    <p className={cn("text-sm text-muted-foreground", className)} {...props} />
+  );
 }
 
 export function Blockquote({
   className,
   ...props
 }: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) {
-  return <blockquote className={cn("mt-6 border-l-2 pl-6 italic", className)} {...props} />;
+  return (
+    <blockquote
+      className={cn("mt-6 border-l-2 pl-6 italic", className)}
+      {...props}
+    />
+  );
 }
 
 export function InlineCode({
@@ -123,5 +141,10 @@ export function List({
   className,
   ...props
 }: React.HTMLAttributes<HTMLUListElement>) {
-  return <ul className={cn("my-6 ml-6 list-disc [&>li]:mt-2", className)} {...props} />;
+  return (
+    <ul
+      className={cn("my-6 ml-6 list-disc [&>li]:mt-2", className)}
+      {...props}
+    />
+  );
 }

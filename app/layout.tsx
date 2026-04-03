@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Serif } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Serif, Merriweather } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" });
+const geistMonoHeading = Geist_Mono({subsets:['latin'],variable:'--font-heading'});
 
-const notoSerif = Noto_Serif({ subsets: ["latin"], variable: "--font-serif" });
+const merriweather = Merriweather({subsets:['latin'],variable:'--font-serif'});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,8 +38,8 @@ export default function RootLayout({
         geistSans.variable,
         geistMono.variable,
         "font-serif",
-        notoSerif.variable,
-        geistHeading.variable,
+        merriweather.variable,
+        geistMonoHeading.variable,
       )}
     >
       <body className="min-h-full flex flex-col">
