@@ -1,63 +1,109 @@
-import Image from "next/image";
+﻿"use client";
 
-export default function Home() {
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { H1 } from "@/components/typography";
+
+export default function HomePage() {
+  const [value, setValue] = React.useState("");
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  const autoResize = React.useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const minHeight = 28;
+    const style = window.getComputedStyle(el);
+    const lineHeight = Number.parseFloat(style.lineHeight) || 16;
+    const padding =
+      Number.parseFloat(style.paddingTop) +
+      Number.parseFloat(style.paddingBottom);
+    const border =
+      Number.parseFloat(style.borderTopWidth) +
+      Number.parseFloat(style.borderBottomWidth);
+    const maxHeight = Math.max(minHeight, lineHeight * 10 + padding + border);
+
+    el.style.height = "0px";
+    const nextHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${Math.max(nextHeight, minHeight)}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, []);
+
+  React.useEffect(() => {
+    autoResize();
+  }, [autoResize]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex min-h-[calc(100dvh-5rem)] flex-col gap-10 py-6">
+      <header className="flex items-center justify-between gap-4">
+        <H1 className="text-2xl lg:text-3xl">Fortuita Consilia</H1>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost">About</Button>
+          <Button variant="outline">Login</Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main className="flex flex-1 items-center justify-center">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="relative mx-auto w-full max-w-2xl sm:w-[36rem]">
+            <div className="relative h-7 w-full overflow-visible">
+              <Textarea
+                placeholder="If you must, begin..."
+                className="absolute bottom-0 left-0 w-full min-h-7 resize-none rounded-none border-0 border-b border-input bg-transparent dark:bg-transparent pl-0 py-1.5 text-sm leading-6 focus-visible:border-ring focus-visible:ring-0"
+                ref={textareaRef}
+                rows={1}
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                onInput={autoResize}
+              />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {value.length} characters
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 shrink-0 gap-2"
+                  data-icon="inline-start"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="size-4"
+                  >
+                    <path
+                      d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Upload
+                </Button>
+                <Button size="sm" className="h-7 w-7 shrink-0 px-0">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="size-4"
+                  >
+                    <path
+                      d="M6 10l6 6 6-6"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 h-px w-full bg-border" />
+          </div>
         </div>
       </main>
     </div>

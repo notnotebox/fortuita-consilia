@@ -127,5 +127,10 @@
   }
   html {
     @apply font-serif;
+    font-size: 16px;
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
   }
 }
