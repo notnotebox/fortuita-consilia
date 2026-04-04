@@ -1,24 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Serif, Merriweather } from "next/font/google";
+import { Geist_Mono, Merriweather } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-const geistMonoHeading = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-heading",
-});
-
 const merriweather = Merriweather({
+  variable: "--font-merriweather",
   subsets: ["latin"],
-  variable: "--font-serif",
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -43,11 +34,9 @@ export default function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        geistSans.variable,
         geistMono.variable,
-        "font-serif",
+        "font-sans",
         merriweather.variable,
-        geistMonoHeading.variable,
       )}
     >
       <head />

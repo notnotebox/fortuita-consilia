@@ -1,4 +1,4 @@
-const ALPHABET = "abcdefghijklmnopqrstuvwxyz ";
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz ,.?!";
 
 function hashString32(input: string): number {
   let hash = 2166136261;

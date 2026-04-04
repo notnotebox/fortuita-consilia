@@ -11,6 +11,27 @@ import type {
   RunStartResponse,
 } from "@/lib/write-run/types";
 
+function formatDisplayText(text: string) {
+  if (!text) return text;
+  let capitalizeNext = true;
+  let out = "";
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (capitalizeNext && char >= "a" && char <= "z") {
+      out += char.toUpperCase();
+      capitalizeNext = false;
+      continue;
+    }
+    out += char;
+    if (char === "." || char === "!" || char === "?") {
+      capitalizeNext = true;
+    } else if (char.trim() !== "") {
+      capitalizeNext = false;
+    }
+  }
+  return out;
+}
+
 export default function HomePage() {
   const MAX_VISIBLE_LINES = 7;
   const REFRESH_INPUT_LOCK_MS = 1000;
@@ -243,6 +264,7 @@ export default function HomePage() {
   }, [value, moveCaretToEnd]);
 
   const showCooldownSpinner = isFocused && isInputLocked && value.length === 0;
+  const displayValue = formatDisplayText(value);
 
   return (
     <div className="flex flex-1 flex-col gap-10 py-6">
@@ -260,11 +282,11 @@ export default function HomePage() {
                 value={
                   isFocused
                     ? isInputLocked
-                      ? value
-                      : value.length === 0
+                      ? displayValue
+                      : displayValue.length === 0
                         ? "_"
-                        : `${value}_`
-                    : value
+                        : `${displayValue}_`
+                    : displayValue
                 }
                 readOnly
                 onInput={autoResize}
