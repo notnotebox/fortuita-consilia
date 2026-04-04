@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Noto_Serif, Merriweather } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 
 const geistMonoHeading = Geist_Mono({subsets:['latin'],variable:'--font-heading'});
 
@@ -42,12 +44,20 @@ export default function RootLayout({
         geistMonoHeading.variable,
       )}
     >
-      <body className="min-h-full flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <div className="flex-1">
-            <div className="mx-auto w-full max-w-screen-xl px-4 sm:px-6 lg:px-8 py-10 ">
+      <head />
+      <body className="min-h-screen flex flex-col">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="flex flex-1 flex-col">
+            <Header />
+            <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col border-x border-border px-4 py-10 sm:px-6 lg:px-8">
               {children}
-            </div>
+            </main>
+            <Footer />
           </div>
         </ThemeProvider>
       </body>

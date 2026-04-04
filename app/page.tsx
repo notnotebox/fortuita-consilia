@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { H1 } from "@/components/typography";
 
 export default function HomePage() {
   const [value, setValue] = React.useState("");
@@ -34,18 +33,10 @@ export default function HomePage() {
   }, [autoResize]);
 
   return (
-    <div className="flex min-h-[calc(100dvh-5rem)] flex-col gap-10 py-6">
-      <header className="flex items-center justify-between gap-4">
-        <H1 className="text-2xl lg:text-3xl">Fortuita Consilia</H1>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost">About</Button>
-          <Button variant="outline">Login</Button>
-        </div>
-      </header>
-
+    <div className="flex flex-1 flex-col gap-10 py-6">
       <main className="flex flex-1 items-center justify-center">
         <div className="mx-auto w-full max-w-3xl">
-          <div className="relative mx-auto w-full max-w-2xl sm:w-[36rem]">
+          <div className="relative mx-auto w-full max-w-2xl sm:w-xl">
             <div className="relative h-7 w-full overflow-visible">
               <Textarea
                 placeholder="If you must, begin..."
