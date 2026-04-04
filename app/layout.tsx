@@ -6,9 +6,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-const geistMonoHeading = Geist_Mono({subsets:['latin'],variable:'--font-heading'});
+const geistMonoHeading = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-heading",
+});
 
-const merriweather = Merriweather({subsets:['latin'],variable:'--font-serif'});
+const merriweather = Merriweather({
+  subsets: ["latin"],
+  variable: "--font-serif",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,7 +60,7 @@ export default function RootLayout({
         >
           <div className="flex flex-1 flex-col">
             <Header />
-            <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col border-x border-border px-4 py-10 sm:px-6 lg:px-8">
+            <main className="mx-auto flex w-full min-w-[min(90%,1280px)] xl:w-[60%] flex-1 flex-col border-x border-border px-4 py-10 sm:px-6 lg:px-8">
               {children}
             </main>
             <Footer />
