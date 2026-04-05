@@ -51,9 +51,22 @@ export interface CommitPayload {
   ops: RunOp[];
 }
 
+export interface DraftPayload {
+  run: RunStartResponse;
+  finalText: string;
+  consumedCount: number;
+  ops: RunOp[];
+}
+
+export interface DraftResponse {
+  ok: boolean;
+  draft: DraftPayload | null;
+}
+
 export interface CommitResponse {
   ok: boolean;
   reason?: string;
   serverText?: string;
   consumedCount?: number;
+  seed?: string;
 }

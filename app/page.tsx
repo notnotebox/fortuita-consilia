@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateNextChar } from "@/lib/write-run/shared";
 import type {
   CommitPayload,
+  DraftPayload,
+  DraftResponse,
   RunOp,
   RunOpType,
   RunStartResponse,
@@ -48,6 +50,70 @@ export default function HomePage() {
   const consumedRef = React.useRef(0);
   const opsRef = React.useRef<RunOp[]>([]);
   const sessionIdRef = React.useRef<string>("");
+  const saveTimeoutRef = React.useRef<number | null>(null);
+
+  const getSessionId = React.useCallback(() => {
+    if (sessionIdRef.current) return sessionIdRef.current;
+
+    sessionIdRef.current =
+      localStorage.getItem("write-run-session-id") ||
+      Math.random().toString(36).slice(2);
+    localStorage.setItem("write-run-session-id", sessionIdRef.current);
+
+    return sessionIdRef.current;
+  }, []);
+
+  const clearServerDraft = React.useCallback(async () => {
+    try {
+      await fetch("/api/write-run/draft", {
+        method: "DELETE",
+        headers: {
+          "x-requester-id": getSessionId(),
+        },
+      });
+    } catch (error) {
+      console.warn("[write-run] draft: failed to clear", error);
+    }
+  }, [getSessionId]);
+
+  const saveDraft = React.useCallback(
+    async (draft: DraftPayload) => {
+      try {
+        await fetch("/api/write-run/draft", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-requester-id": getSessionId(),
+          },
+          body: JSON.stringify(draft),
+        });
+      } catch (error) {
+        console.warn("[write-run] draft: failed to save", error);
+      }
+    },
+    [getSessionId],
+  );
+
+  const loadServerDraft = React.useCallback(async () => {
+    try {
+      const response = await fetch("/api/write-run/draft", {
+        method: "GET",
+        headers: {
+          "x-requester-id": getSessionId(),
+        },
+      });
+
+      if (!response.ok) return null;
+
+      const result = (await response.json()) as DraftResponse;
+      if (!result.ok || !result.draft) return null;
+
+      return result.draft;
+    } catch (error) {
+      console.warn("[write-run] draft: failed to load", error);
+      return null;
+    }
+  }, [getSessionId]);
 
   const pushOp = React.useCallback((type: RunOpType) => {
     const operations = opsRef.current;
@@ -59,87 +125,132 @@ export default function HomePage() {
     operations.push({ t: type, n: 1 });
   }, []);
 
-  const createRun = React.useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setIsLoadingNewSeed(true);
-    }
-    console.log("[write-run] start: requesting new run");
-    try {
-      const response = await fetch("/api/write-run/start", {
-        method: "POST",
-        headers: {
-          "x-requester-id": sessionIdRef.current,
-        },
-      });
-
-      if (response.status === 429) {
-        const cooldown = (await response.json()) as {
-          ok: false;
-          reason: string;
-          retryAfterMs: number;
-        };
-        console.warn("[write-run] start: cooldown enforced", cooldown);
-        // Lock input during cooldown period
-        setIsInputLocked(true);
-        await new Promise((resolve) =>
-          setTimeout(resolve, cooldown.retryAfterMs),
-        );
-        setIsInputLocked(false);
-        return createRun(isRefresh);
-      }
-
-      if (!response.ok) {
-        console.error("[write-run] start: request failed", {
-          status: response.status,
-          statusText: response.statusText,
-        });
-        throw new Error("Failed to start run");
-      }
-
-      const nextRun = (await response.json()) as RunStartResponse;
-      console.log("[write-run] start: run ready", {
-        runId: nextRun.runId,
-        seedPreview: `${nextRun.seed.slice(0, 8)}...`,
-        expiresAt: nextRun.expiresAt,
-        maxOps: nextRun.maxOps,
-        maxConsumed: nextRun.maxConsumed,
-      });
-      setRun(nextRun);
-      setStatus("Run ready");
-      consumedRef.current = 0;
-      opsRef.current = [];
-      valueRef.current = "";
-      setValue("");
-      return nextRun;
-    } catch (error) {
-      console.error("[write-run] start: error", error);
-      const message = error instanceof Error ? error.message : "unknown error";
-      setStatus(`Error: ${message}`);
-    } finally {
+  const createRun = React.useCallback(
+    async (isRefresh = false) => {
       if (isRefresh) {
-        setIsLoadingNewSeed(false);
+        setIsLoadingNewSeed(true);
       }
-    }
-  }, []);
+      console.log("[write-run] start: requesting new run");
+      try {
+        const response = await fetch("/api/write-run/start", {
+          method: "POST",
+          headers: {
+            "x-requester-id": getSessionId(),
+          },
+        });
+
+        if (response.status === 429) {
+          const cooldown = (await response.json()) as {
+            ok: false;
+            reason: string;
+            retryAfterMs: number;
+          };
+          console.warn("[write-run] start: cooldown enforced", cooldown);
+          // Lock input during cooldown period
+          setIsInputLocked(true);
+          await new Promise((resolve) =>
+            setTimeout(resolve, cooldown.retryAfterMs),
+          );
+          setIsInputLocked(false);
+          return createRun(isRefresh);
+        }
+
+        if (!response.ok) {
+          console.error("[write-run] start: request failed", {
+            status: response.status,
+            statusText: response.statusText,
+          });
+          throw new Error("Failed to start run");
+        }
+
+        const nextRun = (await response.json()) as RunStartResponse;
+        console.log("[write-run] start: run ready", {
+          runId: nextRun.runId,
+          seedPreview: `${nextRun.seed.slice(0, 8)}...`,
+          expiresAt: nextRun.expiresAt,
+          maxOps: nextRun.maxOps,
+          maxConsumed: nextRun.maxConsumed,
+        });
+        setRun(nextRun);
+        setStatus("Run ready");
+        consumedRef.current = 0;
+        opsRef.current = [];
+        valueRef.current = "";
+        setValue("");
+        return nextRun;
+      } catch (error) {
+        console.error("[write-run] start: error", error);
+        const message =
+          error instanceof Error ? error.message : "unknown error";
+        setStatus(`Error: ${message}`);
+      } finally {
+        if (isRefresh) {
+          setIsLoadingNewSeed(false);
+        }
+      }
+    },
+    [getSessionId],
+  );
 
   React.useEffect(() => {
     valueRef.current = value;
   }, [value]);
 
   React.useEffect(() => {
-    // Initialize session id then always request the first run once on mount.
-    if (!sessionIdRef.current) {
-      sessionIdRef.current =
-        localStorage.getItem("write-run-session-id") ||
-        Math.random().toString(36).slice(2);
-      localStorage.setItem("write-run-session-id", sessionIdRef.current);
-    }
+    let isCancelled = false;
 
-    createRun().catch((e) => {
+    const initialize = async () => {
+      getSessionId();
+
+      const draft = await loadServerDraft();
+      if (isCancelled) return;
+
+      if (draft) {
+        setRun(draft.run);
+        consumedRef.current = draft.consumedCount;
+        opsRef.current = draft.ops;
+        valueRef.current = draft.finalText;
+        setValue(draft.finalText);
+        setStatus("Draft restored");
+        return;
+      }
+
+      await createRun();
+    };
+
+    initialize().catch((e) => {
       console.error("[write-run] init error:", e);
       setStatus(`Init failed: ${e instanceof Error ? e.message : "unknown"}`);
     });
-  }, [createRun]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [createRun, getSessionId, loadServerDraft]);
+
+  React.useEffect(() => {
+    if (!run) return;
+
+    if (saveTimeoutRef.current) {
+      window.clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = window.setTimeout(() => {
+      void saveDraft({
+        run,
+        finalText: valueRef.current,
+        consumedCount: consumedRef.current,
+        ops: opsRef.current,
+      });
+    }, 350);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, [run, saveDraft, value]);
 
   const appendRandom = React.useCallback(() => {
     if (!run) return;
@@ -157,11 +268,12 @@ export default function HomePage() {
     valueRef.current = next;
     setValue(next);
     if (next === "") {
+      void clearServerDraft();
       void createRun(true);
     } else {
       pushOp("D");
     }
-  }, [pushOp, createRun]);
+  }, [clearServerDraft, pushOp, createRun]);
 
   const commitRun = React.useCallback(async () => {
     if (!run || isSubmitting) return;
@@ -208,6 +320,7 @@ export default function HomePage() {
       }
 
       setStatus("Run committed");
+      await clearServerDraft();
       await createRun();
     } catch (error) {
       console.error("[write-run] commit: network or runtime failure", error);
@@ -217,7 +330,7 @@ export default function HomePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [createRun, isSubmitting, run]);
+  }, [clearServerDraft, createRun, isSubmitting, run]);
 
   const moveCaretToEnd = React.useCallback(() => {
     const el = textareaRef.current;
@@ -352,7 +465,7 @@ export default function HomePage() {
               {showCooldownSpinner ? (
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute bottom-[12px] left-0 text-muted-foreground/70 animate-[spin_1s_linear_infinite]"
+                  className="pointer-events-none absolute bottom-3 left-0 text-muted-foreground/70 animate-spin"
                 >
                   <svg viewBox="0 0 24 24" fill="none" className="size-4">
                     <path
@@ -403,6 +516,7 @@ export default function HomePage() {
                   disabled={isLoadingNewSeed || undefined}
                   suppressHydrationWarning
                   onClick={() => {
+                    void clearServerDraft();
                     void createRun(true);
                   }}
                 >

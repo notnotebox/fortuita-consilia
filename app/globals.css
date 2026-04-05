@@ -11,7 +11,8 @@
   --font-sans: var(--font-merriweather);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-merriweather);
-  --font-heading: "Stardom", "Times New Roman", Times, "Nimbus Roman No9 L",
+  --font-heading:
+    "Stardom", "Times New Roman", Times, "Nimbus Roman No9 L",
     "Liberation Serif", serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

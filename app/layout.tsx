@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { SessionProvider } from "next-auth/react";
 
 const merriweather = Merriweather({
   variable: "--font-merriweather",
@@ -20,6 +21,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Fortuita Consilia",
   description: "Guided by grace, coding with faith",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -47,13 +52,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex flex-1 flex-col">
-            <Header />
-            <main className="mx-auto flex w-full min-w-[min(90%,1280px)] xl:w-[60%] flex-1 flex-col border-x border-border px-4 py-10 sm:px-6 lg:px-8">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <SessionProvider>
+            <div className="flex flex-1 flex-col">
+              <Header />
+              <main className="mx-auto flex w-full min-w-[min(90%,1280px)] xl:w-[60%] flex-1 flex-col border-x border-border px-4 py-10 sm:px-6 lg:px-8">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>
