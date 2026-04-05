@@ -1,13 +1,22 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { H1 } from "@/components/typography";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { LogOut } from "lucide-react";
 
 export function Header() {
   const { data: session } = useSession();
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
+  const displayName =
+    session?.user?.name || session?.user?.email?.split("@")[0] || "User";
+  const initials = displayName.slice(0, 2).toUpperCase();
+
   return (
     <header className="border-b border-border">
       <div className="mx-auto w-full min-w-[min(90%,1280px)] xl:w-[60%] border-x border-border">
@@ -27,15 +36,46 @@ export function Header() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost">About</Button>
+              <Button asChild variant="ghost">
+                <Link href={isHomePage ? "/about" : "/"}>
+                  {isHomePage ? "About" : "Home"}
+                </Link>
+              </Button>
               {session?.user ? (
-                <Button variant="outline" onClick={() => void signOut()}>
-                  Logout
-                </Button>
+                <button
+                  type="button"
+                  className="group/profile inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:cursor-pointer hover:text-foreground"
+                  aria-label="Logout"
+                  onClick={() => void signOut({ callbackUrl: "/" })}
+                >
+                  <Avatar size="sm">
+                    <AvatarImage
+                      src={session.user.image ?? undefined}
+                      alt={displayName}
+                    />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="max-w-30 truncate text-sm">
+                    {displayName}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="ml-0.5 text-muted-foreground/70 opacity-0 transition-opacity duration-100 group-hover/profile:opacity-100 group-focus-visible/profile:opacity-100"
+                  >
+                    <LogOut
+                      className="size-3.5 text-foreground"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </button>
               ) : (
                 <Button
                   variant="outline"
-                  onClick={() => void signIn("discord")}
+                  onClick={() =>
+                    void signIn("discord", {
+                      callbackUrl: pathname || "/",
+                    })
+                  }
                 >
                   Login
                 </Button>

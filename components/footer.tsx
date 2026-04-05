@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="border-t border-border">
@@ -10,7 +12,14 @@ export function Footer() {
             <div className="flex items-center gap-4">
               <span>Legal</span>
               <span>Privacy</span>
-              <span>Contact</span>
+              <Link
+                href="https://github.com/notnotebox/fortuita-consilia/issues"
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-4 hover:underline"
+              >
+                Contact
+              </Link>
             </div>
           </div>
         </div>

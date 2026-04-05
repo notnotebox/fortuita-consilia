@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/write-run/server";
 import type { DraftPayload, DraftResponse } from "@/lib/write-run/types";
 
@@ -9,15 +8,8 @@ export const runtime = "nodejs";
 async function getDraftOwnerId(request: Request): Promise<string> {
   const session = await auth();
 
-  if (session?.user?.email) {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-
-    if (user?.id) {
-      return `user:${user.id}`;
-    }
+  if (session?.user?.id) {
+    return `user:${session.user.id}`;
   }
 
   const requesterIp =

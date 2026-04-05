@@ -4,6 +4,8 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { generateNextChar } from "@/lib/write-run/shared";
+import { Send } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import type {
   CommitPayload,
   DraftPayload,
@@ -37,6 +39,8 @@ function formatDisplayText(text: string) {
 export default function HomePage() {
   const MAX_VISIBLE_LINES = 7;
   const REFRESH_INPUT_LOCK_MS = 1000;
+  const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user?.id);
   const [value, setValue] = React.useState("");
   const [isFocused, setIsFocused] = React.useState(false);
   const [run, setRun] = React.useState<RunStartResponse | null>(null);
@@ -276,6 +280,11 @@ export default function HomePage() {
   }, [clearServerDraft, pushOp, createRun]);
 
   const commitRun = React.useCallback(async () => {
+    if (!isAuthenticated) {
+      void signIn("discord", { callbackUrl: "/" });
+      return;
+    }
+
     if (!run || isSubmitting) return;
     setIsSubmitting(true);
     setStatus("Validating run...");
@@ -315,6 +324,10 @@ export default function HomePage() {
       });
 
       if (!response.ok || !result.ok) {
+        if (response.status === 401 || result.reason === "auth-required") {
+          setStatus("Login required to commit");
+          return;
+        }
         setStatus(`Rejected: ${result.reason ?? "unknown"}`);
         return;
       }
@@ -330,7 +343,7 @@ export default function HomePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [clearServerDraft, createRun, isSubmitting, run]);
+  }, [clearServerDraft, createRun, isAuthenticated, isSubmitting, run]);
 
   const moveCaretToEnd = React.useCallback(() => {
     const el = textareaRef.current;
@@ -545,20 +558,7 @@ export default function HomePage() {
                   suppressHydrationWarning
                   disabled={isSubmitting || !run}
                 >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="size-4"
-                  >
-                    <path
-                      d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <Send className="size-4" aria-hidden="true" />
                   Commit
                 </Button>
                 <Button size="sm" className="h-7 w-7 shrink-0 px-0">
