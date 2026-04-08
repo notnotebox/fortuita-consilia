@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { getUserTag } from "@/lib/user-tag";
 import { LogOut, MessageSquare } from "lucide-react";
 
 export function Header() {
@@ -21,6 +22,9 @@ export function Header() {
   const displayName =
     session?.user?.name || session?.user?.email?.split("@")[0] || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
+  const myMessagesHref = session?.user
+    ? `/author/${getUserTag(session.user)}`
+    : "/";
 
   return (
     <header className="border-b border-border">
@@ -73,7 +77,10 @@ export function Header() {
                       size="sm"
                       className="w-full justify-start gap-1.5"
                     >
-                      <Link href="/" className="inline-flex items-center gap-1.5">
+                      <Link
+                        href={myMessagesHref}
+                        className="inline-flex items-center gap-1.5"
+                      >
                         My messages
                         <MessageSquare className="size-3.5" aria-hidden="true" />
                       </Link>

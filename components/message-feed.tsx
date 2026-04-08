@@ -7,6 +7,14 @@ interface MessageFeedProps {
   onLoadMore?: () => Promise<Message[]>;
 }
 
+function formatDateLabel(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 // Mock data generator for demo purposes
 function generateMockMessage(index: number): Message {
   const pseudos = [
@@ -33,12 +41,16 @@ function generateMockMessage(index: number): Message {
   ];
   const randomMessage = messages[Math.floor(Math.random() * messages.length)];
   const randomPseudo = pseudos[Math.floor(Math.random() * pseudos.length)];
+  const createdAt = new Date(
+    Date.now() - (index * 6 + Math.floor(Math.random() * 6)) * 60 * 60 * 1000,
+  );
 
   return {
     id: `msg-${index}`,
     pseudo: randomPseudo,
     content: randomMessage,
     ratio: `${Math.floor(Math.random() * 50) + 1}`,
+    date: formatDateLabel(createdAt),
   };
 }
 
