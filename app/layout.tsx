@@ -45,7 +45,7 @@ export default function RootLayout({
       )}
     >
       <head />
-      <body className="min-h-screen flex flex-col">
+      <body className="h-screen flex flex-col overflow-hidden">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -53,9 +53,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-1 flex-col min-h-0">
               <Header />
-              <main className="mx-auto flex w-full min-w-[min(90%,1280px)] xl:w-[60%] flex-1 flex-col border-x border-border px-4 py-10 sm:px-6 lg:px-8">
+              <main className="mx-auto flex w-full min-w-[min(90%,1280px)] xl:w-[60%] flex-1 flex-col border-x border-border px-4 py-12 sm:px-6 lg:px-8 min-h-0 overflow-hidden">
                 {children}
               </main>
               <Footer />

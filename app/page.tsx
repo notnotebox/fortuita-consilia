@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { MessageFeed } from "@/components/message-feed";
 import { generateNextChar } from "@/lib/write-run/shared";
 import { Send } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
@@ -48,6 +49,7 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingNewSeed, setIsLoadingNewSeed] = React.useState(false);
   const [isInputLocked, setIsInputLocked] = React.useState(false);
+  const [isMessageFeedOpen, setIsMessageFeedOpen] = React.useState(true);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const valueRef = React.useRef(value);
@@ -393,9 +395,10 @@ export default function HomePage() {
   const displayValue = formatDisplayText(value);
 
   return (
-    <div className="flex flex-1 flex-col gap-10 py-6">
-      <main className="flex flex-1 items-center justify-center">
-        <div className="mx-auto w-full max-w-3xl">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Input Bar - Sticky at top */}
+      <div className="bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 flex-shrink-0">
+        <div className="mx-auto w-full max-w-3xl px-6 py-12">
           <div className="group/confessional relative mx-auto w-full max-w-2xl sm:w-xl">
             <div ref={containerRef} className="relative w-full">
               <Textarea
@@ -548,6 +551,7 @@ export default function HomePage() {
                     />
                   </svg>
                 </Button>
+                <p className="text-xs text-muted-foreground">{status}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -561,29 +565,58 @@ export default function HomePage() {
                   <Send className="size-4" aria-hidden="true" />
                   Commit
                 </Button>
-                <Button size="sm" className="h-7 w-7 shrink-0 px-0">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="size-4"
-                  >
-                    <path
-                      d="M6 10l6 6 6-6"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                <Button
+                  size="sm"
+                  className="h-7 w-7 shrink-0 px-0"
+                  onClick={() => setIsMessageFeedOpen(!isMessageFeedOpen)}
+                  aria-label="Toggle message feed"
+                >
+                  {!isMessageFeedOpen ? (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="size-4"
+                    >
+                      <path
+                        d="M6 10l6 6 6-6"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="size-4"
+                    >
+                      <path
+                        d="M5 12h14"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
                 </Button>
               </div>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{status}</p>
-            {/* <div className="mt-3 h-px w-full bg-border" /> */}
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Messages Feed - Scrollable list */}
+      {isMessageFeedOpen && (
+        <div className="bg-background flex-1 min-h-0">
+          <div className="overflow-y-auto h-full px-4 py-12">
+            <MessageFeed />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,13 +1,18 @@
-"use client";
+﻿"use client";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { H1 } from "@/components/typography";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { LogOut } from "lucide-react";
+import { LogOut, MessageSquare } from "lucide-react";
 
 export function Header() {
   const { data: session } = useSession();
@@ -42,32 +47,49 @@ export function Header() {
                 </Link>
               </Button>
               {session?.user ? (
-                <button
-                  type="button"
-                  className="group/profile inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:cursor-pointer hover:text-foreground"
-                  aria-label="Logout"
-                  onClick={() => void signOut({ callbackUrl: "/" })}
-                >
-                  <Avatar size="sm">
-                    <AvatarImage
-                      src={session.user.image ?? undefined}
-                      alt={displayName}
-                    />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                  <span className="max-w-30 truncate text-sm">
-                    {displayName}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="ml-0.5 text-muted-foreground/70 opacity-0 transition-opacity duration-100 group-hover/profile:opacity-100 group-focus-visible/profile:opacity-100"
-                  >
-                    <LogOut
-                      className="size-3.5 text-foreground"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:cursor-pointer hover:text-foreground"
+                      aria-label="Profile menu"
+                    >
+                      <Avatar size="sm">
+                        <AvatarImage
+                          src={session.user.image ?? undefined}
+                          alt={displayName}
+                        />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="max-w-30 truncate text-sm">
+                        {displayName}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-44 p-1">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-1.5"
+                    >
+                      <Link href="/" className="inline-flex items-center gap-1.5">
+                        My messages
+                        <MessageSquare className="size-3.5" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-1.5"
+                      onClick={() => void signOut({ callbackUrl: "/" })}
+                    >
+                      Sign out
+                      <LogOut className="size-3.5" aria-hidden="true" />
+                    </Button>
+                  </PopoverContent>
+                </Popover>
               ) : (
                 <Button
                   variant="outline"
@@ -87,3 +109,5 @@ export function Header() {
     </header>
   );
 }
+
+
