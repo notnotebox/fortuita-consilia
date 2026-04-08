@@ -89,11 +89,17 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
 
               <dl className="self-center text-sm text-muted-foreground">
                 <div className="flex items-baseline justify-end gap-3 leading-none">
-                  <dt className="text-right text-xs uppercase tracking-[0.12em]">Tag</dt>
-                  <dd className="w-14 text-right font-medium text-foreground">{tag}</dd>
+                  <dt className="text-right text-xs uppercase tracking-[0.12em]">
+                    Tag
+                  </dt>
+                  <dd className="w-14 text-right font-medium text-foreground">
+                    {tag}
+                  </dd>
                 </div>
                 <div className="mt-1 flex items-baseline justify-end gap-3 leading-none">
-                  <dt className="text-right text-xs uppercase tracking-[0.12em]">Messages</dt>
+                  <dt className="text-right text-xs uppercase tracking-[0.12em]">
+                    Messages
+                  </dt>
                   <dd className="w-14 text-right tabular-nums font-medium text-foreground">
                     {messages.length}
                   </dd>
