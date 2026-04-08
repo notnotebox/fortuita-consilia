@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ExternalLink as ExternalLinkIcon, Star } from "lucide-react";
 
@@ -7,7 +7,7 @@ const linkClassNameNoUnderline = "transition-colors";
 const labelClassName = "uppercase tracking-[0.12em]";
 const textClassName = "text-[0.98rem] leading-7";
 const techListClassName =
-  "grid gap-x-6 gap-y-3 text-sm text-muted-foreground sm:grid-cols-[120px_max-content]";
+  "grid gap-x-6 gap-y-3 text-sm text-muted-foreground min-[740px]:grid-cols-[120px_max-content]";
 
 const techColumns = [
   [
@@ -45,6 +45,7 @@ const techColumns = [
     },
   ],
 ];
+const mobileTechItems = techColumns.flat();
 
 function ExternalLink({
   href,
@@ -75,7 +76,7 @@ function TechList({
   items: { label: string; links: { href: string; label: string }[] }[];
 }) {
   return (
-    <dl className={techListClassName}>
+    <dl className={`hidden min-[740px]:grid ${techListClassName}`}>
       {items.map((item) => (
         <div key={item.label} className="contents">
           <dt className={labelClassName}>{item.label}</dt>
@@ -99,7 +100,6 @@ function TechList({
     </dl>
   );
 }
-
 export default function AboutPage() {
   return (
     <div className="mx-auto flex w-full flex-1 items-center justify-center py-8 sm:py-12">
@@ -118,8 +118,8 @@ export default function AboutPage() {
           <section className="space-y-4">
             <p className={textClassName}>
               Chaque caractère est généré indépendamment, dans un processus où
-              l&apos;intention et la détermination s&apos;érodent de concert,
-              laissant le message s&apos;altérer à mesure qu&apos;il prend
+              l'intention et la détermination s'érodent de concert, laissant le
+              message s'altérer à mesure qu'il prend
               forme.
             </p>
 
@@ -130,13 +130,35 @@ export default function AboutPage() {
             </p>
 
             <p className={textClassName}>
-              À l&apos;instar de messagers d&apos;antan, c&apos;est par la force
-              du dessein qu&apos;un chemin se trace dans l&apos;adversité.
+              À l'instar de messagers d'antan, c'est par la force du dessein
+              qu'un chemin se trace dans l'adversité.
             </p>
           </section>
 
           <section className="space-y-16">
-            <div className="mx-auto grid w-full max-w-2xl gap-6 sm:grid-cols-2 sm:gap-x-12">
+            <div className="mx-auto grid w-full max-w-2xl gap-8 min-[740px]:grid-cols-2 min-[740px]:gap-x-12">
+              <ul className="space-y-2 text-sm text-muted-foreground min-[740px]:hidden">
+                {mobileTechItems.map((item) => (
+                  <li
+                    key={item.label}
+                    className="grid grid-cols-[120px_minmax(0,1fr)] items-start gap-x-6 leading-7"
+                  >
+                    <span className={`${labelClassName} whitespace-nowrap`}>
+                      {item.label}
+                    </span>
+                    <span>
+                      {item.links.map((link, index) => (
+                        <span key={link.href}>
+                          {index > 0 ? (
+                            <span className="text-border"> · </span>
+                          ) : null}
+                          <ExternalLink href={link.href}>{link.label}</ExternalLink>
+                        </span>
+                      ))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
               <TechList items={techColumns[0]} />
               <TechList items={techColumns[1]} />
             </div>
@@ -164,3 +186,5 @@ export default function AboutPage() {
     </div>
   );
 }
+
+
