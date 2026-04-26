@@ -3,6 +3,10 @@ import { hashOps, hashSeed, verifyCommit } from "@/lib/write-run/server";
 import type { CommitPayload } from "@/lib/write-run/types";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  buildCreatedMessagePayload,
+  emitMessageCreated,
+} from "@/lib/realtime/server";
 
 export const runtime = "nodejs";
 
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
   const opsCount = payload.ops.reduce((sum, op) => sum + op.n, 0);
   const seed = result.seed ?? "";
 
-  await prisma.message.create({
+  const createdMessage = await prisma.message.create({
     data: {
       content: payload.finalText,
       runId: payload.runId,
@@ -48,7 +52,24 @@ export async function POST(request: Request) {
       length: payload.finalText.length,
       authorId,
     },
+    select: {
+      id: true,
+      content: true,
+      tries: true,
+      createdAt: true,
+      authorId: true,
+      author: {
+        select: {
+          name: true,
+          discordTag: true,
+          email: true,
+          image: true,
+        },
+      },
+    },
   });
+
+  emitMessageCreated(buildCreatedMessagePayload(createdMessage));
 
   return NextResponse.json(result, { status: 200 });
 }

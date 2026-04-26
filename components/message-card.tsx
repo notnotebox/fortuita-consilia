@@ -5,7 +5,28 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { normalizeUserTag } from "@/lib/user-tag";
-import { Flag, Origami } from "lucide-react";
+import { Flag, Origami, Trash2 } from "lucide-react";
+
+function formatDisplayText(text: string) {
+  if (!text) return text;
+  let capitalizeNext = true;
+  let out = "";
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (capitalizeNext && char >= "a" && char <= "z") {
+      out += char.toUpperCase();
+      capitalizeNext = false;
+      continue;
+    }
+    out += char;
+    if (char === "." || char === "!" || char === "?") {
+      capitalizeNext = true;
+    } else if (char.trim() !== "") {
+      capitalizeNext = false;
+    }
+  }
+  return out;
+}
 
 export interface Message {
   id: string;
@@ -15,6 +36,7 @@ export interface Message {
   date?: string;
   avatar?: string;
   authorTag?: string;
+  userId?: string;
 }
 
 interface MessageCardProps {
@@ -22,15 +44,39 @@ interface MessageCardProps {
   showAuthorMeta?: boolean;
   align?: "center" | "left";
   withHorizontalInset?: boolean;
+  currentUserId?: string;
+  onDelete?: (messageId: string) => Promise<void>;
 }
 
 export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
   (
-    { message, showAuthorMeta = true, align = "center", withHorizontalInset = true },
+    {
+      message,
+      showAuthorMeta = true,
+      align = "center",
+      withHorizontalInset = true,
+      currentUserId,
+      onDelete,
+    },
     ref,
   ) => {
     const initials = message.pseudo.slice(0, 2).toUpperCase();
     const authorHref = `/author/${message.authorTag ?? normalizeUserTag(message.pseudo)}`;
+    const displayContent = formatDisplayText(message.content);
+    const isOwner =
+      currentUserId && message.userId && currentUserId === message.userId;
+    const [isDeleting, setIsDeleting] = React.useState(false);
+
+    const handleDelete = async () => {
+      if (onDelete && !isDeleting) {
+        setIsDeleting(true);
+        try {
+          await onDelete(message.id);
+        } finally {
+          setIsDeleting(false);
+        }
+      }
+    };
 
     return (
       <div ref={ref} className="w-full py-4">
@@ -47,7 +93,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
             {/* Mobile layout */}
             <div className="min-[740px]:hidden">
               <div className="rounded-md bg-muted/10 py-0 text-sm text-muted-foreground break-words whitespace-pre-wrap leading-relaxed min-h-12 text-left mb-2">
-                {message.content}
+                {displayContent}
               </div>
 
               <div
@@ -60,17 +106,23 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                       className="flex flex-1 min-w-0 items-center gap-2 rounded-md transition-colors hover:text-foreground"
                     >
                       <Avatar size="sm">
-                        <AvatarImage src={message.avatar} alt={message.pseudo} />
+                        <AvatarImage
+                          src={message.avatar}
+                          alt={message.pseudo}
+                        />
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
-                      <span className="truncate text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                      <span
+                        className="truncate text-xs uppercase tracking-[0.12em] text-muted-foreground"
+                        title={message.pseudo}
+                      >
                         {message.pseudo}
                       </span>
                     </Link>
                   </>
                 ) : null}
 
-                <div className="shrink-0 inline-flex items-start gap-3">
+                <div className="shrink-0 inline-flex items-start gap-4">
                   <div className="inline-flex flex-col items-end whitespace-nowrap">
                     <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">
                       {message.ratio}
@@ -86,11 +138,25 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    className="text-muted-foreground/70 hover:text-muted-foreground"
-                    aria-label="Report this message"
-                    title="Report this message"
+                    className={`${
+                      isOwner
+                        ? "text-muted-foreground/70 hover:text-destructive"
+                        : "text-muted-foreground/70 hover:text-muted-foreground"
+                    }`}
+                    aria-label={
+                      isOwner ? "Delete this message" : "Report this message"
+                    }
+                    title={
+                      isOwner ? "Delete this message" : "Report this message"
+                    }
+                    onClick={isOwner ? handleDelete : undefined}
+                    disabled={isDeleting}
                   >
-                    <Flag className="size-3" aria-hidden="true" />
+                    {isOwner ? (
+                      <Trash2 className="size-3" aria-hidden="true" />
+                    ) : (
+                      <Flag className="size-3" aria-hidden="true" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -108,7 +174,10 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
 
-                    <span className="truncate text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                    <span
+                      className="truncate text-xs uppercase tracking-[0.12em] text-muted-foreground"
+                      title={message.pseudo}
+                    >
                       {message.pseudo}
                     </span>
                   </Link>
@@ -117,7 +186,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
             ) : null}
 
             <div className="absolute top-0 left-full ml-4 hidden min-[740px]:block">
-              <div className="inline-flex items-start gap-3">
+              <div className="inline-flex items-start gap-4">
                 <div className="inline-flex flex-col items-start whitespace-nowrap">
                   <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">
                     {message.ratio}
@@ -133,18 +202,32 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  className="text-muted-foreground/70 hover:text-muted-foreground"
-                  aria-label="Report this message"
-                  title="Report this message"
+                  className={`${
+                    isOwner
+                      ? "text-muted-foreground/70 hover:text-destructive"
+                      : "text-muted-foreground/70 hover:text-muted-foreground"
+                  }`}
+                  aria-label={
+                    isOwner ? "Delete this message" : "Report this message"
+                  }
+                  title={
+                    isOwner ? "Delete this message" : "Report this message"
+                  }
+                  onClick={isOwner ? handleDelete : undefined}
+                  disabled={isDeleting}
                 >
-                  <Flag className="size-3" aria-hidden="true" />
+                  {isOwner ? (
+                    <Trash2 className="size-3" aria-hidden="true" />
+                  ) : (
+                    <Flag className="size-3" aria-hidden="true" />
+                  )}
                 </Button>
               </div>
             </div>
 
             {/* Desktop layout */}
             <div className="hidden min-[740px]:block rounded-md bg-muted/10 py-0 text-sm text-muted-foreground break-words whitespace-pre-wrap leading-relaxed min-h-12 text-left">
-              {message.content}
+              {displayContent}
             </div>
           </div>
         </div>

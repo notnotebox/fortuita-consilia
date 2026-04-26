@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MessageCard, type Message } from "@/components/message-card";
+import { type Message } from "@/components/message-card";
+import { AuthorMessageList } from "@/components/author-message-list";
 import { prisma } from "@/lib/prisma";
 import { getUserTag } from "@/lib/user-tag";
-import { ExternalLink as ExternalLinkIcon } from "lucide-react";
+import { PencilLine } from "lucide-react";
+import { auth } from "@/auth";
 
 type AuthorPageProps = {
   params: Promise<{ tag: string }>;
@@ -21,6 +23,8 @@ function formatDateLabel(date: Date): string {
 
 export default async function AuthorPage({ params }: AuthorPageProps) {
   const { tag } = await params;
+  const session = await auth();
+  const currentUserId = session?.user?.id;
 
   const users = await prisma.user.findMany({
     where: {
@@ -29,6 +33,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
     select: {
       id: true,
       name: true,
+      discordTag: true,
       email: true,
       image: true,
       messages: {
@@ -48,6 +53,8 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
 
   const pseudo = author.name || author.email?.split("@")[0] || "Unknown";
   const initials = pseudo.slice(0, 2).toUpperCase();
+  const displayTag = author.discordTag || tag.replace(/-/g, ".");
+  const isLongTag = displayTag.length > 14;
 
   const messages: Message[] = author.messages.map((message) => ({
     id: message.id,
@@ -57,10 +64,11 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
     ratio: String(message.tries),
     date: formatDateLabel(message.createdAt),
     authorTag: tag,
-  }));
+    userId: currentUserId && currentUserId === author.id ? author.id : undefined,
+  }));  
 
   return (
-    <div className="mx-auto flex w-full flex-1 items-start justify-center">
+    <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
       <article className="w-full max-w-2xl bg-background/20 px-5 py-6 sm:px-8 sm:py-9">
         <div className="space-y-16">
           <header>
@@ -87,31 +95,38 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
                 </div>
               </div>
 
-              <dl className="self-center text-sm text-muted-foreground">
-                <div className="flex items-baseline justify-end gap-3 leading-none">
-                  <dt className="text-right text-xs uppercase tracking-[0.12em]">
-                    Tag
-                  </dt>
-                  <dd className="w-14 text-right font-medium text-foreground">
-                    {tag}
-                  </dd>
-                </div>
-                <div className="mt-1 flex items-baseline justify-end gap-3 leading-none">
-                  <dt className="text-right text-xs uppercase tracking-[0.12em]">
-                    Messages
-                  </dt>
-                  <dd className="w-14 text-right tabular-nums font-medium text-foreground">
-                    {messages.length}
-                  </dd>
-                </div>
+              <dl
+                className={`self-center grid items-baseline justify-end gap-x-3 gap-y-1 text-sm text-muted-foreground ${
+                  isLongTag
+                    ? "grid-cols-[auto_minmax(9rem,12rem)]"
+                    : "grid-cols-[auto_max-content]"
+                }`}
+              >
+                <dt className="text-right text-xs uppercase tracking-[0.12em]">
+                  Tag
+                </dt>
+                <dd
+                  className={`text-right font-medium text-foreground ${
+                    isLongTag ? "break-words leading-tight" : "whitespace-nowrap"
+                  }`}
+                  title={displayTag}
+                >
+                  {displayTag}
+                </dd>
+                <dt className="text-right text-xs uppercase tracking-[0.12em]">
+                  Messages
+                </dt>
+                <dd className="text-right tabular-nums font-medium text-foreground">
+                  {messages.length}
+                </dd>
               </dl>
             </div>
 
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Button asChild variant="ghost">
                 <Link href="/" className="inline-flex items-center gap-1.5">
-                  Home
-                  <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
+                  Write a new message
+                  <PencilLine className="size-3.5" aria-hidden="true" />
                 </Link>
               </Button>
             </div>
@@ -119,17 +134,12 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
 
           <section className="mx-auto w-full sm:w-xl">
             {messages.length > 0 ? (
-              <div className="space-y-0">
-                {messages.map((message) => (
-                  <MessageCard
-                    key={message.id}
-                    message={message}
-                    showAuthorMeta={false}
-                    align="left"
-                    withHorizontalInset={false}
-                  />
-                ))}
-              </div>
+              <AuthorMessageList
+                messages={messages}
+                currentUserId={currentUserId}
+                authorId={author.id}
+                authorTag={tag}
+              />
             ) : (
               <p className="text-sm text-muted-foreground">No messages yet.</p>
             )}
