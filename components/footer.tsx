@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 
@@ -10,8 +10,12 @@ export function Footer() {
           <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span>© 2026 Fortuita Consilia. All rights reserved.</span>
             <div className="flex items-center gap-4">
-              <span>Legal</span>
-              <span>Privacy</span>
+              <Link href="/legal" className="underline-offset-4 hover:underline">
+                Legal
+              </Link>
+              <Link href="/privacy" className="underline-offset-4 hover:underline">
+                Privacy
+              </Link>
               <Link
                 href="https://github.com/notnotebox/fortuita-consilia/issues"
                 target="_blank"

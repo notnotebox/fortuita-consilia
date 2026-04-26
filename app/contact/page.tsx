@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 export default function ContactPage() {
   return (
-    <div className="mx-auto flex w-full flex-1 items-center justify-center py-8 sm:py-12">
+    <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
       <article className="w-full max-w-2xl bg-background/20 px-5 py-6 sm:px-8 sm:py-9">
         <div className="space-y-8">
           <header>
