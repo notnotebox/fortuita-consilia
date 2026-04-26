@@ -80,3 +80,10 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model DailyUptime {
+  id        String   @id @default(uuid()) @db.Uuid
+  day       DateTime @db.Date @unique
+  source    String   @default("server")
+  createdAt DateTime @default(now())
+}
