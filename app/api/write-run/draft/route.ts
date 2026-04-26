@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/write-run/server";
+import { getRequesterIdFromHeaders } from "@/lib/requester";
 import type { DraftPayload, DraftResponse } from "@/lib/write-run/types";
 
 export const runtime = "nodejs";
@@ -12,13 +13,7 @@ async function getDraftOwnerId(request: Request): Promise<string> {
     return `user:${session.user.id}`;
   }
 
-  const requesterIp =
-    request.headers.get("x-forwarded-for") ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
-
-  const requesterIdHeader = request.headers.get("x-requester-id");
-  const requesterId = requesterIdHeader || requesterIp;
+  const requesterId = getRequesterIdFromHeaders(request.headers);
 
   return `anon:${requesterId}`;
 }

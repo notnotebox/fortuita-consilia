@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { createRun, StartRunCooldownError } from "@/lib/write-run/server";
+import { getRequesterIdFromHeaders } from "@/lib/requester";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const requesterIp =
-    request.headers.get("x-forwarded-for") ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
-
-  const requesterIdHeader = request.headers.get("x-requester-id");
-  const requesterId = requesterIdHeader || requesterIp;
+  const requesterId = getRequesterIdFromHeaders(request.headers);
 
   try {
     const started = createRun(requesterId);

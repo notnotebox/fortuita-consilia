@@ -22,8 +22,11 @@ const FREE_REFRESH_ATTEMPTS = 20;
 const REFRESH_COOLDOWN_MS = 1000;
 const DRAFT_TTL_MS = 1000 * 60 * 60 * 12;
 
-const WRITE_RUN_SECRET =
-  process.env.WRITE_RUN_SECRET ?? "dev-write-run-secret-change-me";
+const writeRunSecretEnv = process.env.WRITE_RUN_SECRET;
+if (!writeRunSecretEnv && process.env.NODE_ENV === "production") {
+  throw new Error("WRITE_RUN_SECRET is required in production");
+}
+const WRITE_RUN_SECRET = writeRunSecretEnv ?? "dev-write-run-secret-change-me";
 
 type Store = Map<string, RunState>;
 type RefreshState = {
