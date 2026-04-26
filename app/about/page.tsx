@@ -1,11 +1,11 @@
 ﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ExternalLink as ExternalLinkIcon, Star } from "lucide-react";
+import { AboutCopyToggle } from "./about-copy-toggle";
 
 const linkClassName = "underline-offset-4 transition-colors hover:underline";
 const linkClassNameNoUnderline = "transition-colors";
 const labelClassName = "uppercase tracking-[0.12em]";
-const textClassName = "text-[0.98rem] leading-7";
 const techListClassName =
   "grid gap-x-6 gap-y-3 text-sm text-muted-foreground min-[740px]:grid-cols-[120px_max-content]";
 
@@ -82,10 +82,7 @@ function TechList({
           <dt className={labelClassName}>{item.label}</dt>
           <dd className="flex flex-wrap items-center gap-1.5">
             {item.links.map((link, index) => (
-              <span
-                key={link.href}
-                className="inline-flex items-center gap-1.5"
-              >
+              <span key={link.href} className="inline-flex items-center gap-1.5">
                 {index > 0 && (
                   <span aria-hidden="true" className="text-border">
                     ·
@@ -100,6 +97,7 @@ function TechList({
     </dl>
   );
 }
+
 export default function AboutPage() {
   return (
     <div className="mx-auto flex w-full flex-1 items-center justify-center py-8 sm:py-12">
@@ -115,25 +113,7 @@ export default function AboutPage() {
             </p>
           </header>
 
-          <section className="space-y-4">
-            <p className={textClassName}>
-              Chaque caractère est généré indépendamment, dans un processus où
-              l'intention et la détermination s'érodent de concert, laissant le
-              message s'altérer à mesure qu'il prend
-              forme.
-            </p>
-
-            <p className={textClassName}>
-              À considérer, éventuellement, comme une épreuve : seules les
-              formulations portées par une foi inébranlable parviennent à être
-              exprimées.
-            </p>
-
-            <p className={textClassName}>
-              À l'instar de messagers d'antan, c'est par la force du dessein
-              qu'un chemin se trace dans l'adversité.
-            </p>
-          </section>
+          <AboutCopyToggle />
 
           <section className="space-y-16">
             <div className="mx-auto grid w-full max-w-2xl gap-8 min-[740px]:grid-cols-2 min-[740px]:gap-x-12">
@@ -149,9 +129,7 @@ export default function AboutPage() {
                     <span>
                       {item.links.map((link, index) => (
                         <span key={link.href}>
-                          {index > 0 ? (
-                            <span className="text-border"> · </span>
-                          ) : null}
+                          {index > 0 ? <span className="text-border"> · </span> : null}
                           <ExternalLink href={link.href}>{link.label}</ExternalLink>
                         </span>
                       ))}
@@ -186,5 +164,3 @@ export default function AboutPage() {
     </div>
   );
 }
-
-
