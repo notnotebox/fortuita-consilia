@@ -10,7 +10,7 @@ import {
 import { H1 } from "@/components/typography";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { getUserTag } from "@/lib/user-tag";
 import { LogOut, MessageSquare } from "lucide-react";
@@ -18,6 +18,7 @@ import { LogOut, MessageSquare } from "lucide-react";
 export function Header() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const isHomePage = pathname === "/";
   const displayName =
     session?.user?.name || session?.user?.email?.split("@")[0] || "User";
@@ -38,7 +39,6 @@ export function Header() {
                   alt="Fortuita Consilia logo"
                   width={30}
                   height={25}
-                  priority
                   className="h-7 w-auto"
                 />
                 <H1 className="text-2xl lg:text-3xl">Fortuita Consilia</H1>
@@ -90,7 +90,10 @@ export function Header() {
                       variant="ghost"
                       size="sm"
                       className="w-full justify-start gap-1.5"
-                      onClick={() => void signOut({ callbackUrl: "/" })}
+                      onClick={async () => {
+                        await signOut({ redirect: false });
+                        router.refresh();
+                      }}
                     >
                       Sign out
                       <LogOut className="size-3.5" aria-hidden="true" />
@@ -116,5 +119,6 @@ export function Header() {
     </header>
   );
 }
+
 
 
