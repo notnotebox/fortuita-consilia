@@ -46,6 +46,7 @@ export interface RunStartCooldownResponse {
 export interface CommitPayload {
   runId: string;
   token: ClientRunToken;
+  initialChar: string;
   finalText: string;
   consumedCount: number;
   ops: RunOp[];
@@ -53,6 +54,7 @@ export interface CommitPayload {
 
 export interface DraftPayload {
   run: RunStartResponse;
+  initialChar: string;
   finalText: string;
   consumedCount: number;
   ops: RunOp[];

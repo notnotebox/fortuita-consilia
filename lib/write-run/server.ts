@@ -200,8 +200,11 @@ export function hashSeed(seed: string): string {
     .digest("base64url");
 }
 
-export function hashOps(ops: CommitPayload["ops"]): string {
-  const payload = JSON.stringify(ops);
+export function hashOps(
+  ops: CommitPayload["ops"],
+  initialChar: string = "",
+): string {
+  const payload = JSON.stringify({ initialChar, ops });
   return createHmac("sha256", WRITE_RUN_SECRET)
     .update(payload)
     .digest("base64url");
@@ -291,7 +294,7 @@ export function clearDraft(ownerId: string): void {
 function replayRun(run: RunState, payload: CommitPayload): CommitResponse {
   let consumedCount = 0;
   let opCount = 0;
-  let text = "";
+  let text = payload.initialChar;
 
   for (const op of payload.ops) {
     if ((op.t !== "A" && op.t !== "D" && op.t !== "N") || op.n <= 0) {
@@ -350,6 +353,8 @@ function replayRun(run: RunState, payload: CommitPayload): CommitResponse {
 export function verifyCommit(payload: CommitPayload): CommitResponse {
   cleanupExpiredRuns();
 
+  payload.initialChar = payload.initialChar ?? "";
+
   const tokenPayload = verifyToken(payload.token);
   if (!tokenPayload) {
     return { ok: false, reason: "invalid-token" };
@@ -381,14 +386,21 @@ export function verifyCommit(payload: CommitPayload): CommitResponse {
     return { ok: false, reason: "stale-token" };
   }
 
+  if (typeof payload.initialChar !== "string" || payload.initialChar.length > 1) {
+    return { ok: false, reason: "invalid-initial-char" };
+  }
+
   if (
     typeof payload.finalText !== "string" ||
     payload.finalText.length > 12000
   ) {
     return { ok: false, reason: "invalid-final-text" };
   }
+  if (payload.finalText.length === 0) {
+    return { ok: false, reason: "empty-final-text" };
+  }
 
-  if (!Array.isArray(payload.ops) || payload.ops.length === 0) {
+  if (!Array.isArray(payload.ops)) {
     return { ok: false, reason: "invalid-ops" };
   }
 

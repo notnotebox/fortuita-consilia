@@ -45,6 +45,9 @@ export async function POST(request: Request) {
   if (
     !payload ||
     typeof payload.finalText !== "string" ||
+    (payload.initialChar !== undefined &&
+      (typeof payload.initialChar !== "string" ||
+        payload.initialChar.length > 1)) ||
     !Number.isInteger(payload.consumedCount) ||
     payload.consumedCount < 0 ||
     !Array.isArray(payload.ops) ||
@@ -60,6 +63,8 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  payload.initialChar = payload.initialChar ?? "";
 
   const ownerId = await getDraftOwnerId(request);
   saveDraft(ownerId, payload);

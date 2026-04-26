@@ -39,7 +39,6 @@ function formatDisplayText(text: string) {
 
 export default function HomePage() {
   const MAX_VISIBLE_LINES = 7;
-  const REFRESH_INPUT_LOCK_MS = 1000;
   const { data: session } = useSession();
   const isAuthenticated = Boolean(session?.user?.id);
   const [value, setValue] = React.useState("");
@@ -53,6 +52,7 @@ export default function HomePage() {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const valueRef = React.useRef(value);
+  const initialCharRef = React.useRef("");
   const consumedRef = React.useRef(0);
   const opsRef = React.useRef<RunOp[]>([]);
   const sessionIdRef = React.useRef<string>("");
@@ -179,6 +179,7 @@ export default function HomePage() {
         });
         setRun(nextRun);
         setStatus("Run ready");
+        initialCharRef.current = "";
         consumedRef.current = 0;
         opsRef.current = [];
         valueRef.current = "";
@@ -213,6 +214,7 @@ export default function HomePage() {
 
       if (draft) {
         setRun(draft.run);
+        initialCharRef.current = draft.initialChar ?? "";
         consumedRef.current = draft.consumedCount;
         opsRef.current = draft.ops;
         valueRef.current = draft.finalText;
@@ -244,6 +246,7 @@ export default function HomePage() {
     saveTimeoutRef.current = window.setTimeout(() => {
       void saveDraft({
         run,
+        initialChar: initialCharRef.current,
         finalText: valueRef.current,
         consumedCount: consumedRef.current,
         ops: opsRef.current,
@@ -267,6 +270,15 @@ export default function HomePage() {
     setValue(next);
     pushOp("A");
   }, [pushOp, run]);
+
+  const appendInitialChar = React.useCallback((char: string) => {
+    if (valueRef.current.length > 0) return;
+    if (!char || char.length !== 1) return;
+
+    initialCharRef.current = char;
+    valueRef.current = char;
+    setValue(char);
+  }, []);
 
   const deleteOne = React.useCallback(() => {
     const next = valueRef.current.slice(0, -1);
@@ -294,6 +306,7 @@ export default function HomePage() {
     const payload: CommitPayload = {
       runId: run.runId,
       token: run.token,
+      initialChar: initialCharRef.current,
       finalText: valueRef.current,
       consumedCount: consumedRef.current,
       ops: opsRef.current,
@@ -458,7 +471,11 @@ export default function HomePage() {
                   }
                   if (isTypingKey) {
                     event.preventDefault();
-                    appendRandom();
+                    if (valueRef.current.length === 0) {
+                      appendInitialChar(event.key);
+                    } else {
+                      appendRandom();
+                    }
                   }
                   requestAnimationFrame(moveCaretToEnd);
                 }}
@@ -470,12 +487,22 @@ export default function HomePage() {
                 onPaste={(event) => {
                   event.preventDefault();
                   if (isInputLocked || !run) return;
-                  appendRandom();
+                  const pasted = event.clipboardData.getData("text");
+                  if (valueRef.current.length === 0) {
+                    appendInitialChar(pasted.slice(0, 1));
+                  } else {
+                    appendRandom();
+                  }
                 }}
                 onDrop={(event) => {
                   event.preventDefault();
                   if (isInputLocked || !run) return;
-                  appendRandom();
+                  const dropped = event.dataTransfer.getData("text");
+                  if (valueRef.current.length === 0) {
+                    appendInitialChar(dropped.slice(0, 1));
+                  } else {
+                    appendRandom();
+                  }
                 }}
               />
               {showCooldownSpinner ? (

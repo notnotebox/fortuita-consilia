@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       seed,
       seedHash: hashSeed(seed),
       consumedCount: result.consumedCount ?? payload.consumedCount,
-      opsHash: hashOps(payload.ops),
+      opsHash: hashOps(payload.ops, payload.initialChar ?? ""),
       tries: opsCount,
       length: payload.finalText.length,
       authorId,
