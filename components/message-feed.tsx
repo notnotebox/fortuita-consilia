@@ -13,15 +13,33 @@ interface MessageFeedProps {
   onLoadMore?: () => Promise<Message[]>;
 }
 
+function getRequesterId(): string {
+  const key = "write-run-session-id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+
+  const created = Math.random().toString(36).slice(2);
+  localStorage.setItem(key, created);
+  return created;
+}
+
 async function fetchMessages(skip: number, take: number, signal?: AbortSignal): Promise<Message[]> {
   const queryParams = new URLSearchParams({
     skip: String(skip),
     take: String(take),
   });
   try {
-    const response = await fetch(`/api/messages?${queryParams}`, { signal });
+    const response = await fetch(`/api/messages?${queryParams}`, {
+      signal,
+      headers: {
+        "x-requester-id": getRequesterId(),
+      },
+    });
 
     if (!response.ok) {
+      if (response.status === 503) {
+        return [];
+      }
       console.warn("Failed to fetch messages", { status: response.status });
       return [];
     }
@@ -119,7 +137,10 @@ export const MessageFeed = React.forwardRef<HTMLDivElement, MessageFeedProps>(
         try {
           const response = await fetch("/api/messages/delete", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-requester-id": getRequesterId(),
+            },
             body: JSON.stringify({ messageId }),
           });
 

@@ -15,6 +15,16 @@ interface AuthorMessageListProps {
   authorTag: string;
 }
 
+function getRequesterId(): string {
+  const key = "write-run-session-id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+
+  const created = Math.random().toString(36).slice(2);
+  localStorage.setItem(key, created);
+  return created;
+}
+
 export function AuthorMessageList({
   messages,
   currentUserId,
@@ -31,7 +41,11 @@ export function AuthorMessageList({
       take: "100",
     });
 
-    const response = await fetch(`/api/messages?${queryParams}`);
+    const response = await fetch(`/api/messages?${queryParams}`, {
+      headers: {
+        "x-requester-id": getRequesterId(),
+      },
+    });
     if (!response.ok) {
       throw new Error("Failed to fetch author messages");
     }
@@ -85,7 +99,10 @@ export function AuthorMessageList({
     try {
       const response = await fetch("/api/messages/delete", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-requester-id": getRequesterId(),
+        },
         body: JSON.stringify({ messageId }),
       });
 

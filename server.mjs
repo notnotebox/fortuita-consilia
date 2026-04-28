@@ -24,6 +24,10 @@ function buildAllowedOrigins() {
     values.push(process.env.NEXTAUTH_URL.trim());
   }
 
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    values.push(process.env.NEXT_PUBLIC_APP_URL.trim());
+  }
+
   if (process.env.VERCEL_URL) {
     values.push(`https://${process.env.VERCEL_URL.trim()}`);
   }
