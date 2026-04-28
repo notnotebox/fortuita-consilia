@@ -1,7 +1,14 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
+import type { Adapter } from "next-auth/adapters";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import {
+  clearDbUnavailable,
+  hasDbCooldown,
+  isDbUnavailableError,
+  markDbUnavailable,
+} from "@/lib/db-availability";
 
 type DiscordMe = {
   id: string;
@@ -31,6 +38,32 @@ function buildDiscordAvatarUrl(profile: DiscordMe): string | null {
   if (!profile.avatar) return null;
   const ext = profile.avatar.startsWith("a_") ? "gif" : "png";
   return `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.${ext}?size=256`;
+}
+
+function wrapAdapterForDbOutage(adapter: Adapter): Adapter {
+  return {
+    ...adapter,
+    async getSessionAndUser(sessionToken) {
+      if (hasDbCooldown()) {
+        return null;
+      }
+
+      try {
+        const result = (await adapter.getSessionAndUser?.(sessionToken)) ?? null;
+        clearDbUnavailable();
+        return result;
+      } catch (error) {
+        if (isDbUnavailableError(error)) {
+          markDbUnavailable();
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[auth] Database unreachable (P1001). Returning anonymous session.");
+          }
+          return null;
+        }
+        throw error;
+      }
+    },
+  };
 }
 
 async function syncDiscordProfile(input: {
@@ -68,7 +101,7 @@ async function syncDiscordProfile(input: {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: wrapAdapterForDbOutage(PrismaAdapter(prisma)),
   basePath: "/api/auth",
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   pages: {
@@ -111,11 +144,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { discordTag: true },
-        });
-        session.user.discordTag = dbUser?.discordTag ?? null;
+        if (hasDbCooldown()) {
+          session.user.discordTag = null;
+          return session;
+        }
+
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { discordTag: true },
+          });
+          clearDbUnavailable();
+          session.user.discordTag = dbUser?.discordTag ?? null;
+        } catch (error) {
+          if (isDbUnavailableError(error)) {
+            markDbUnavailable();
+            session.user.discordTag = null;
+          } else {
+            throw error;
+          }
+        }
       }
       return session;
     },

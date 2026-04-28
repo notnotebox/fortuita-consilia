@@ -3,6 +3,13 @@ import { auth } from "@/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRequesterIdFromHeaders } from "@/lib/requester";
 import { getUserTag } from "@/lib/user-tag";
+import {
+  clearDbUnavailable,
+  getDbRetryAfterSeconds,
+  hasDbCooldown,
+  isDbUnavailableError,
+  markDbUnavailable,
+} from "@/lib/db-availability";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -30,6 +37,23 @@ function parseBoundedInt(
 
 export async function GET(request: NextRequest) {
   try {
+    if (hasDbCooldown()) {
+      const retryAfter = getDbRetryAfterSeconds();
+      return NextResponse.json(
+        {
+          error: "Database unavailable",
+          details:
+            process.env.NODE_ENV !== "production"
+              ? "Unable to reach database host. Check DATABASE_URL and network/IPv6 connectivity."
+              : undefined,
+        },
+        {
+          status: 503,
+          headers: retryAfter > 0 ? { "Retry-After": String(retryAfter) } : undefined,
+        }
+      );
+    }
+
     const session = await auth();
     const currentUserId = session?.user?.id ?? null;
     const requesterId = currentUserId
@@ -104,6 +128,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    clearDbUnavailable();
+
     return NextResponse.json(
       messages.map((msg) => ({
         id: msg.id,
@@ -122,7 +148,26 @@ export async function GET(request: NextRequest) {
       }))
     );
   } catch (error) {
+    if (isDbUnavailableError(error)) {
+      markDbUnavailable();
+      const retryAfter = getDbRetryAfterSeconds();
+      return NextResponse.json(
+        {
+          error: "Database unavailable",
+          details:
+            process.env.NODE_ENV !== "production"
+              ? "Unable to reach database host. Check DATABASE_URL and network/IPv6 connectivity."
+              : undefined,
+        },
+        {
+          status: 503,
+          headers: retryAfter > 0 ? { "Retry-After": String(retryAfter) } : undefined,
+        }
+      );
+    }
+
     console.error("Error fetching messages:", error);
+
     const details =
       process.env.NODE_ENV !== "production" && error instanceof Error
         ? { details: error.message }
