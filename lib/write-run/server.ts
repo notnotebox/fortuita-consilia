@@ -9,7 +9,6 @@ import type {
   ClientRunTokenPayload,
   CommitPayload,
   CommitResponse,
-  DraftPayload,
   RunStartResponse,
   RunState,
 } from "@/lib/write-run/types";
@@ -20,8 +19,6 @@ const MAX_CONSUMED = 4000;
 const REFRESH_WINDOW_MS = 1000 * 60 * 20;
 const FREE_REFRESH_ATTEMPTS = 20;
 const REFRESH_COOLDOWN_MS = 1000;
-const DRAFT_TTL_MS = 1000 * 60 * 60 * 12;
-
 const writeRunSecretEnv = process.env.WRITE_RUN_SECRET;
 if (!writeRunSecretEnv && process.env.NODE_ENV === "production") {
   throw new Error("WRITE_RUN_SECRET is required in production");
@@ -35,13 +32,10 @@ type RefreshState = {
   lastIssuedAt: number;
 };
 type RefreshStore = Map<string, RefreshState>;
-type DraftState = DraftPayload & { savedAt: number };
-type DraftStore = Map<string, DraftState>;
 
 declare global {
   var __WRITE_RUN_STORE__: Store | undefined;
   var __WRITE_RUN_REFRESH_STORE__: RefreshStore | undefined;
-  var __WRITE_RUN_DRAFT_STORE__: DraftStore | undefined;
 }
 
 export class StartRunCooldownError extends Error {
@@ -65,13 +59,6 @@ function getRefreshStore(): RefreshStore {
     globalThis.__WRITE_RUN_REFRESH_STORE__ = new Map<string, RefreshState>();
   }
   return globalThis.__WRITE_RUN_REFRESH_STORE__;
-}
-
-function getDraftStore(): DraftStore {
-  if (!globalThis.__WRITE_RUN_DRAFT_STORE__) {
-    globalThis.__WRITE_RUN_DRAFT_STORE__ = new Map<string, DraftState>();
-  }
-  return globalThis.__WRITE_RUN_DRAFT_STORE__;
 }
 
 function base64urlEncode(raw: string): string {
@@ -144,24 +131,6 @@ function cleanupRefreshState(): void {
   }
 }
 
-function cleanupDraftState(): void {
-  const now = Date.now();
-  const store = getDraftStore();
-  const runStore = getStore();
-
-  for (const [draftOwner, draft] of store.entries()) {
-    if (now - draft.savedAt > DRAFT_TTL_MS) {
-      store.delete(draftOwner);
-      continue;
-    }
-
-    const run = runStore.get(draft.run.runId);
-    if (!run || run.committed || run.expiresAt <= now) {
-      store.delete(draftOwner);
-    }
-  }
-}
-
 function enforceStartCooldown(requesterId: string, now: number): void {
   const store = getRefreshStore();
   const current = store.get(requesterId);
@@ -213,7 +182,6 @@ export function hashOps(
 export function createRun(requesterId: string): RunStartResponse {
   cleanupRefreshState();
   cleanupExpiredRuns();
-  cleanupDraftState();
 
   const now = Date.now();
   enforceStartCooldown(requesterId, now);
@@ -251,44 +219,6 @@ export function createRun(requesterId: string): RunStartResponse {
     maxOps: state.maxOps,
     maxConsumed: state.maxConsumed,
   };
-}
-
-export function saveDraft(ownerId: string, draft: DraftPayload): void {
-  cleanupExpiredRuns();
-  cleanupDraftState();
-
-  const now = Date.now();
-  const run = getStore().get(draft.run.runId);
-  if (!run || run.committed || run.expiresAt <= now) {
-    return;
-  }
-
-  getDraftStore().set(ownerId, {
-    run: draft.run,
-    finalText: draft.finalText,
-    consumedCount: draft.consumedCount,
-    ops: draft.ops,
-    savedAt: now,
-  });
-}
-
-export function loadDraft(ownerId: string): DraftPayload | null {
-  cleanupExpiredRuns();
-  cleanupDraftState();
-
-  const stored = getDraftStore().get(ownerId);
-  if (!stored) return null;
-
-  return {
-    run: stored.run,
-    finalText: stored.finalText,
-    consumedCount: stored.consumedCount,
-    ops: stored.ops,
-  };
-}
-
-export function clearDraft(ownerId: string): void {
-  getDraftStore().delete(ownerId);
 }
 
 function replayRun(run: RunState, payload: CommitPayload): CommitResponse {

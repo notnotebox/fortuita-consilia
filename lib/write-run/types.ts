@@ -60,11 +60,6 @@ export interface DraftPayload {
   ops: RunOp[];
 }
 
-export interface DraftResponse {
-  ok: boolean;
-  draft: DraftPayload | null;
-}
-
 export interface CommitResponse {
   ok: boolean;
   reason?: string;

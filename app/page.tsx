@@ -10,11 +10,12 @@ import { signIn, useSession } from "next-auth/react";
 import type {
   CommitPayload,
   DraftPayload,
-  DraftResponse,
   RunOp,
   RunOpType,
   RunStartResponse,
 } from "@/lib/write-run/types";
+
+const LOCAL_DRAFT_KEY = "write-run-draft-v1";
 
 function formatDisplayText(text: string) {
   if (!text) return text;
@@ -69,57 +70,48 @@ export default function HomePage() {
     return sessionIdRef.current;
   }, []);
 
-  const clearServerDraft = React.useCallback(async () => {
+  const saveLocalDraft = React.useCallback((draft: DraftPayload) => {
     try {
-      await fetch("/api/write-run/draft", {
-        method: "DELETE",
-        headers: {
-          "x-requester-id": getSessionId(),
-        },
-      });
+      localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(draft));
     } catch (error) {
-      console.warn("[write-run] draft: failed to clear", error);
+      console.warn("[write-run] local draft: failed to save", error);
     }
-  }, [getSessionId]);
+  }, []);
 
-  const saveDraft = React.useCallback(
-    async (draft: DraftPayload) => {
-      try {
-        await fetch("/api/write-run/draft", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-requester-id": getSessionId(),
-          },
-          body: JSON.stringify(draft),
-        });
-      } catch (error) {
-        console.warn("[write-run] draft: failed to save", error);
-      }
-    },
-    [getSessionId],
-  );
-
-  const loadServerDraft = React.useCallback(async () => {
+  const loadLocalDraft = React.useCallback((): DraftPayload | null => {
     try {
-      const response = await fetch("/api/write-run/draft", {
-        method: "GET",
-        headers: {
-          "x-requester-id": getSessionId(),
-        },
-      });
-
-      if (!response.ok) return null;
-
-      const result = (await response.json()) as DraftResponse;
-      if (!result.ok || !result.draft) return null;
-
-      return result.draft;
+      const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as DraftPayload;
+      if (
+        !parsed ||
+        typeof parsed.finalText !== "string" ||
+        !Number.isInteger(parsed.consumedCount) ||
+        !Array.isArray(parsed.ops) ||
+        typeof parsed.run?.runId !== "string" ||
+        typeof parsed.run?.token !== "string" ||
+        typeof parsed.run?.seed !== "string" ||
+        !Number.isInteger(parsed.run?.expiresAt) ||
+        !Number.isInteger(parsed.run?.maxOps) ||
+        !Number.isInteger(parsed.run?.maxConsumed)
+      ) {
+        return null;
+      }
+      parsed.initialChar = parsed.initialChar ?? "";
+      return parsed;
     } catch (error) {
-      console.warn("[write-run] draft: failed to load", error);
+      console.warn("[write-run] local draft: failed to load", error);
       return null;
     }
-  }, [getSessionId]);
+  }, []);
+
+  const clearLocalDraft = React.useCallback(() => {
+    try {
+      localStorage.removeItem(LOCAL_DRAFT_KEY);
+    } catch (error) {
+      console.warn("[write-run] local draft: failed to clear", error);
+    }
+  }, []);
 
   const pushOp = React.useCallback((type: RunOpType) => {
     const operations = opsRef.current;
@@ -130,6 +122,28 @@ export default function HomePage() {
     }
     operations.push({ t: type, n: 1 });
   }, []);
+
+  const buildDraftSnapshot = React.useCallback((): DraftPayload | null => {
+    if (!run) return null;
+    return {
+      run,
+      initialChar: initialCharRef.current,
+      finalText: valueRef.current,
+      consumedCount: consumedRef.current,
+      ops: opsRef.current,
+    };
+  }, [run]);
+
+  const flushDraftNow = React.useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    const snapshot = buildDraftSnapshot();
+    if (!snapshot) return;
+    saveLocalDraft(snapshot);
+  }, [buildDraftSnapshot, saveLocalDraft]);
 
   const createRun = React.useCallback(
     async (isRefresh = false) => {
@@ -184,6 +198,7 @@ export default function HomePage() {
         opsRef.current = [];
         valueRef.current = "";
         setValue("");
+        clearLocalDraft();
         return nextRun;
       } catch (error) {
         console.error("[write-run] start: error", error);
@@ -196,7 +211,7 @@ export default function HomePage() {
         }
       }
     },
-    [getSessionId],
+    [clearLocalDraft, getSessionId],
   );
 
   React.useEffect(() => {
@@ -204,22 +219,18 @@ export default function HomePage() {
   }, [value]);
 
   React.useEffect(() => {
-    let isCancelled = false;
-
     const initialize = async () => {
       getSessionId();
 
-      const draft = await loadServerDraft();
-      if (isCancelled) return;
-
-      if (draft) {
-        setRun(draft.run);
-        initialCharRef.current = draft.initialChar ?? "";
-        consumedRef.current = draft.consumedCount;
-        opsRef.current = draft.ops;
-        valueRef.current = draft.finalText;
-        setValue(draft.finalText);
-        setStatus("Draft restored");
+      const localDraft = loadLocalDraft();
+      if (localDraft && localDraft.run.expiresAt > Date.now()) {
+        setRun(localDraft.run);
+        initialCharRef.current = localDraft.initialChar ?? "";
+        consumedRef.current = localDraft.consumedCount;
+        opsRef.current = localDraft.ops;
+        valueRef.current = localDraft.finalText;
+        setValue(localDraft.finalText);
+        setStatus("Local draft restored");
         return;
       }
 
@@ -230,11 +241,12 @@ export default function HomePage() {
       console.error("[write-run] init error:", e);
       setStatus(`Init failed: ${e instanceof Error ? e.message : "unknown"}`);
     });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [createRun, getSessionId, loadServerDraft]);
+    return undefined;
+  }, [
+    createRun,
+    getSessionId,
+    loadLocalDraft,
+  ]);
 
   React.useEffect(() => {
     if (!run) return;
@@ -244,13 +256,14 @@ export default function HomePage() {
     }
 
     saveTimeoutRef.current = window.setTimeout(() => {
-      void saveDraft({
+      const snapshot: DraftPayload = {
         run,
         initialChar: initialCharRef.current,
         finalText: valueRef.current,
         consumedCount: consumedRef.current,
         ops: opsRef.current,
-      });
+      };
+      saveLocalDraft(snapshot);
     }, 350);
 
     return () => {
@@ -259,7 +272,7 @@ export default function HomePage() {
         saveTimeoutRef.current = null;
       }
     };
-  }, [run, saveDraft, value]);
+  }, [run, saveLocalDraft, value]);
 
   const appendRandom = React.useCallback(() => {
     if (!run) return;
@@ -286,15 +299,16 @@ export default function HomePage() {
     valueRef.current = next;
     setValue(next);
     if (next === "") {
-      void clearServerDraft();
+      clearLocalDraft();
       void createRun(true);
     } else {
       pushOp("D");
     }
-  }, [clearServerDraft, pushOp, createRun]);
+  }, [clearLocalDraft, pushOp, createRun]);
 
   const commitRun = React.useCallback(async () => {
     if (!isAuthenticated) {
+      await flushDraftNow();
       void signIn("discord", { callbackUrl: "/" });
       return;
     }
@@ -348,7 +362,7 @@ export default function HomePage() {
       }
 
       setStatus("Run committed");
-      await clearServerDraft();
+      clearLocalDraft();
       await createRun();
     } catch (error) {
       console.error("[write-run] commit: network or runtime failure", error);
@@ -358,7 +372,14 @@ export default function HomePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [clearServerDraft, createRun, isAuthenticated, isSubmitting, run]);
+  }, [
+    clearLocalDraft,
+    createRun,
+    flushDraftNow,
+    isAuthenticated,
+    isSubmitting,
+    run,
+  ]);
 
   const moveCaretToEnd = React.useCallback(() => {
     const el = textareaRef.current;
@@ -559,7 +580,6 @@ export default function HomePage() {
                   disabled={isLoadingNewSeed || undefined}
                   suppressHydrationWarning
                   onClick={() => {
-                    void clearServerDraft();
                     void createRun(true);
                   }}
                 >
