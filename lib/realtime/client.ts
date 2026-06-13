@@ -11,6 +11,9 @@ export function getRealtimeSocket(): Socket {
     path: "/socket.io",
     transports: ["websocket"],
     autoConnect: true,
+    timeout: 1500,
+    reconnectionAttempts: 2,
+    reconnectionDelayMax: 2000,
   });
 
   return socket;

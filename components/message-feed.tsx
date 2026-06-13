@@ -4,6 +4,7 @@ import * as React from "react";
 import { MessageCard, type Message } from "./message-card";
 import { useSession } from "next-auth/react";
 import { getRealtimeSocket } from "@/lib/realtime/client";
+import { getUserTag } from "@/lib/user-tag";
 import type {
   MessageCreatedEvent,
   MessageDeletedEvent,
@@ -56,6 +57,10 @@ export const MessageFeed = React.forwardRef<HTMLDivElement, MessageFeedProps>(
   ({ onLoadMore }, ref) => {
     const { data: session } = useSession();
     const currentUserId = session?.user?.id;
+    const currentUserTag = React.useMemo(
+      () => (session?.user ? getUserTag(session.user) : null),
+      [session?.user],
+    );
     const [messages, setMessages] = React.useState<Message[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
     const [, setHasMore] = React.useState(true);
@@ -210,11 +215,18 @@ export const MessageFeed = React.forwardRef<HTMLDivElement, MessageFeedProps>(
           if (prev.some((message) => message.id === payload.id)) {
             return prev;
           }
+          const isOwnMessage =
+            Boolean(currentUserId) &&
+            Boolean(currentUserTag) &&
+            payload.authorTag === currentUserTag;
+          const nextMessage: Message = isOwnMessage
+            ? { ...payload, userId: currentUserId }
+            : payload;
           loadedIdsRef.current.add(payload.id);
           skipRef.current += 1;
           hasMoreRef.current = true;
           setHasMore(true);
-          return [payload, ...prev];
+          return [nextMessage, ...prev];
         });
       };
 
@@ -237,7 +249,7 @@ export const MessageFeed = React.forwardRef<HTMLDivElement, MessageFeedProps>(
         socket.off("message:created", onCreated);
         socket.off("message:deleted", onDeleted);
       };
-    }, [onLoadMore]);
+    }, [currentUserId, currentUserTag, onLoadMore]);
 
     return (
       <div ref={ref} className="w-full max-w-6xl mx-auto">

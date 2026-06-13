@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRequesterIdFromHeaders } from "@/lib/requester";
 import { getUserTag } from "@/lib/user-tag";
+import { buildPainMetrics, toPublicMessageId } from "@/lib/message-metrics";
 import {
   clearDbUnavailable,
   getDbRetryAfterSeconds,
@@ -113,8 +114,11 @@ export async function GET(request: NextRequest) {
       take,
       select: {
         id: true,
+        shortId: true,
         content: true,
         tries: true,
+        consumedCount: true,
+        length: true,
         createdAt: true,
         authorId: true,
         author: {
@@ -131,21 +135,30 @@ export async function GET(request: NextRequest) {
     clearDbUnavailable();
 
     return NextResponse.json(
-      messages.map((msg) => ({
-        id: msg.id,
-        content: msg.content,
-        ratio: String(msg.tries),
-        pseudo: msg.author?.name || msg.author?.email?.split("@")[0] || "Unknown",
-        avatar: msg.author?.image,
-        authorTag: getUserTag(msg.author ?? {}),
-        // Expose owner id only for the current user's own messages.
-        userId: msg.authorId && msg.authorId === currentUserId ? msg.authorId : undefined,
-        date: new Intl.DateTimeFormat("en-US", {
-          month: "short",
-          day: "2-digit",
-          year: "numeric",
-        }).format(msg.createdAt),
-      }))
+      messages.map((msg) => {
+        const metrics = buildPainMetrics({
+          iterations: msg.tries,
+          consumed: msg.consumedCount,
+          length: msg.length,
+        });
+        return {
+          id: msg.id,
+          publicId: toPublicMessageId(msg.shortId),
+          content: msg.content,
+          ratio: metrics.ratioLabel,
+          ratioDetails: metrics.ratioDetails,
+          pseudo: msg.author?.name || msg.author?.email?.split("@")[0] || "Unknown",
+          avatar: msg.author?.image,
+          authorTag: getUserTag(msg.author ?? {}),
+          // Expose owner id only for the current user's own messages.
+          userId: msg.authorId && msg.authorId === currentUserId ? msg.authorId : undefined,
+          date: new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+          }).format(msg.createdAt),
+        };
+      })
     );
   } catch (error) {
     if (isDbUnavailableError(error)) {

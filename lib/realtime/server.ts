@@ -1,4 +1,5 @@
 import { getUserTag } from "@/lib/user-tag";
+import { buildPainMetrics, toPublicMessageId } from "@/lib/message-metrics";
 import type {
   MessageCreatedEvent,
   MessageDeletedEvent,
@@ -26,8 +27,11 @@ export function emitMessageDeleted(payload: MessageDeletedEvent): void {
 
 export function buildCreatedMessagePayload(input: {
   id: string;
+  shortId: string;
   content: string;
   tries: number;
+  consumedCount: number;
+  length: number;
   createdAt: Date;
   author?: {
     name?: string | null;
@@ -43,11 +47,18 @@ export function buildCreatedMessagePayload(input: {
     discordTag: input.author?.discordTag ?? null,
     email: input.author?.email ?? null,
   });
+  const metrics = buildPainMetrics({
+    iterations: input.tries,
+    consumed: input.consumedCount,
+    length: input.length,
+  });
 
   return {
     id: input.id,
+    publicId: toPublicMessageId(input.shortId),
     content: input.content,
-    ratio: String(input.tries),
+    ratio: metrics.ratioLabel,
+    ratioDetails: metrics.ratioDetails,
     pseudo,
     avatar: input.author?.image ?? undefined,
     authorTag,

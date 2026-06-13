@@ -8,8 +8,10 @@ declare global {
 
 export type MessageCreatedEvent = {
   id: string;
+  publicId: string;
   content: string;
   ratio: string;
+  ratioDetails: string;
   pseudo: string;
   avatar?: string;
   authorTag: string;

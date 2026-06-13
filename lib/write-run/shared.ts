@@ -1,4 +1,4 @@
-const ALPHABET = "abcdefghijklmnopqrstuvwxyz ,.?!";
+export const WRITE_RUN_ALPHABET = "abcdefghijklmnopqrstuvwxyz ,.?!";
 
 function hashString32(input: string): number {
   let hash = 2166136261;
@@ -11,7 +11,11 @@ function hashString32(input: string): number {
 
 export function generateNextChar(seed: string, cursor: number): string {
   const value = hashString32(`${seed}:${cursor}`);
-  return ALPHABET[value % ALPHABET.length] ?? " ";
+  return WRITE_RUN_ALPHABET[value % WRITE_RUN_ALPHABET.length] ?? " ";
+}
+
+export function isWriteRunCharAllowed(char: string): boolean {
+  return char.length === 1 && WRITE_RUN_ALPHABET.includes(char);
 }
 
 export function clampPositiveInt(value: number, fallback: number): number {

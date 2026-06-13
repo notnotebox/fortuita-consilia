@@ -1,3 +1,5 @@
+import { isReservedRouteTag } from "@/lib/reserved-route-tags";
+
 type UserTagSource = {
   id?: string | null;
   name?: string | null;
@@ -19,7 +21,10 @@ export function getUserTag(user: UserTagSource): string {
   const emailName = user.email?.split("@")[0]?.trim();
   const idPrefix = user.id?.slice(0, 8);
   const raw = discordTag || name || emailName || idPrefix || "user";
+
   const normalized = normalizeUserTag(raw);
-  if (normalized) return normalized;
-  return idPrefix ? normalizeUserTag(idPrefix) : "user";
+  const baseTag = normalized || (idPrefix ? normalizeUserTag(idPrefix) : "user");
+
+  if (!isReservedRouteTag(baseTag)) return baseTag;
+  return `@${baseTag}`;
 }

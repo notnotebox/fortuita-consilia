@@ -147,8 +147,8 @@ export function AboutCopyToggle() {
         onClick={handleToggleLanguage}
         disabled={isAnimating}
         className="absolute right-0 top-0 size-8 text-muted-foreground sm:-right-10"
-        title={isEnglish ? "Passer en français" : "Switch to English"}
-        aria-label={isEnglish ? "Passer en français" : "Switch to English"}
+        title={isEnglish ? "Switch to French" : "Switch to English"}
+        aria-label={isEnglish ? "Switch to French" : "Switch to English"}
       >
         <LanguagesIcon className="size-4" aria-hidden="true" />
       </Button>

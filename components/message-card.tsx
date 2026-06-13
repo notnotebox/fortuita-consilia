@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { normalizeUserTag } from "@/lib/user-tag";
-import { Flag, Origami, Trash2 } from "lucide-react";
+import { Crosshair, Flag, Origami, Trash2 } from "lucide-react";
 
 function formatDisplayText(text: string) {
   if (!text) return text;
@@ -30,9 +30,11 @@ function formatDisplayText(text: string) {
 
 export interface Message {
   id: string;
+  publicId?: string;
   pseudo: string;
   content: string;
   ratio: string;
+  ratioDetails?: string;
   date?: string;
   avatar?: string;
   authorTag?: string;
@@ -42,6 +44,7 @@ export interface Message {
 interface MessageCardProps {
   message: Message;
   showAuthorMeta?: boolean;
+  showMessageLink?: boolean;
   align?: "center" | "left";
   withHorizontalInset?: boolean;
   currentUserId?: string;
@@ -53,6 +56,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
     {
       message,
       showAuthorMeta = true,
+      showMessageLink = true,
       align = "center",
       withHorizontalInset = true,
       currentUserId,
@@ -61,7 +65,10 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
     ref,
   ) => {
     const initials = message.pseudo.slice(0, 2).toUpperCase();
-    const authorHref = `/author/${message.authorTag ?? normalizeUserTag(message.pseudo)}`;
+    const authorHref = `/${message.authorTag ?? normalizeUserTag(message.pseudo)}`;
+    const messageHref = message.authorTag
+      ? `/${message.authorTag}/${message.publicId ?? message.id}`
+      : `/message/${message.publicId ?? message.id}`;
     const displayContent = formatDisplayText(message.content);
     const isOwner =
       currentUserId && message.userId && currentUserId === message.userId;
@@ -126,7 +133,9 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                   <div className="inline-flex flex-col items-end whitespace-nowrap">
                     <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">
                       {message.ratio}
-                      <Origami className="size-3.5" aria-hidden="true" />
+                      <span title={message.ratioDetails}>
+                        <Origami className="size-3.5" aria-hidden="true" />
+                      </span>
                     </span>
                     {message.date ? (
                       <span className="mt-0.5 text-[11px] text-muted-foreground/80">
@@ -134,6 +143,20 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                       </span>
                     ) : null}
                   </div>
+                  {showMessageLink ? (
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-muted-foreground/70 hover:text-muted-foreground"
+                      aria-label="Focus this message"
+                      title="Focus this message"
+                    >
+                      <Link href={messageHref}>
+                        <Crosshair className="size-3" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"
@@ -190,7 +213,9 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                 <div className="inline-flex flex-col items-start whitespace-nowrap">
                   <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">
                     {message.ratio}
-                    <Origami className="size-3.5" aria-hidden="true" />
+                    <span title={message.ratioDetails}>
+                      <Origami className="size-3.5" aria-hidden="true" />
+                    </span>
                   </span>
                   {message.date ? (
                     <span className="mt-0.5 text-[11px] text-muted-foreground/80">
@@ -198,6 +223,20 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                     </span>
                   ) : null}
                 </div>
+                {showMessageLink ? (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground/70 hover:text-muted-foreground"
+                    aria-label="Focus this message"
+                    title="Focus this message"
+                  >
+                    <Link href={messageHref}>
+                      <Crosshair className="size-3" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"
@@ -237,3 +276,4 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
 );
 
 MessageCard.displayName = "MessageCard";
+

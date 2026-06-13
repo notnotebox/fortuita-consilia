@@ -4,7 +4,7 @@ import {
   randomUUID,
   timingSafeEqual,
 } from "node:crypto";
-import { generateNextChar } from "@/lib/write-run/shared";
+import { generateNextChar, isWriteRunCharAllowed } from "@/lib/write-run/shared";
 import type {
   ClientRunTokenPayload,
   CommitPayload,
@@ -317,6 +317,12 @@ export function verifyCommit(payload: CommitPayload): CommitResponse {
   }
 
   if (typeof payload.initialChar !== "string" || payload.initialChar.length > 1) {
+    return { ok: false, reason: "invalid-initial-char" };
+  }
+  if (
+    payload.initialChar.length === 1 &&
+    !isWriteRunCharAllowed(payload.initialChar)
+  ) {
     return { ok: false, reason: "invalid-initial-char" };
   }
 

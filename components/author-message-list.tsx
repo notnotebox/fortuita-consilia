@@ -13,6 +13,7 @@ interface AuthorMessageListProps {
   currentUserId?: string;
   authorId: string;
   authorTag: string;
+  totalCount?: number;
 }
 
 function getRequesterId(): string {
@@ -30,15 +31,22 @@ export function AuthorMessageList({
   currentUserId,
   authorId,
   authorTag,
+  totalCount = messages.length,
 }: AuthorMessageListProps) {
+  const isOwnAuthorPage = Boolean(currentUserId) && currentUserId === authorId;
   const [localMessages, setLocalMessages] = React.useState(messages);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const pendingDeleteIdsRef = React.useRef<Set<string>>(new Set());
+  const observerTarget = React.useRef<HTMLDivElement | null>(null);
+  const loadedIdsRef = React.useRef<Set<string>>(new Set(messages.map((m) => m.id)));
+  const hasMoreRef = React.useRef(messages.length < totalCount);
+  const isLoadingRef = React.useRef(false);
 
-  const refreshAuthorMessages = React.useCallback(async () => {
+  const fetchAuthorMessages = React.useCallback(async (skip: number, take: number) => {
     const queryParams = new URLSearchParams({
       authorId,
-      skip: "0",
-      take: "100",
+      skip: String(skip),
+      take: String(take),
     });
 
     const response = await fetch(`/api/messages?${queryParams}`, {
@@ -50,16 +58,52 @@ export function AuthorMessageList({
       throw new Error("Failed to fetch author messages");
     }
 
-    const freshMessages = (await response.json()) as Message[];
-    return freshMessages.filter(
-      (message) => !pendingDeleteIdsRef.current.has(message.id),
-    );
+    return (await response.json()) as Message[];
   }, [authorId]);
+
+  const refreshAuthorMessages = React.useCallback(async () => {
+    const freshMessages = await fetchAuthorMessages(0, Math.max(localMessages.length, 10));
+    return freshMessages.filter((message) => !pendingDeleteIdsRef.current.has(message.id));
+  }, [fetchAuthorMessages, localMessages.length]);
+
+  const loadMoreMessages = React.useCallback(async () => {
+    if (isLoadingRef.current || !hasMoreRef.current) return;
+    isLoadingRef.current = true;
+    setIsLoadingMore(true);
+    try {
+      const newMessages = await fetchAuthorMessages(localMessages.length, 10);
+      if (newMessages.length === 0) {
+        hasMoreRef.current = false;
+        return;
+      }
+
+      const uniqueMessages = newMessages.filter((message) => {
+        if (loadedIdsRef.current.has(message.id)) return false;
+        loadedIdsRef.current.add(message.id);
+        return true;
+      });
+
+      if (uniqueMessages.length === 0) {
+        hasMoreRef.current = false;
+        return;
+      }
+
+      setLocalMessages((prev) => [...prev, ...uniqueMessages]);
+      hasMoreRef.current = localMessages.length + uniqueMessages.length < totalCount;
+    } catch (error) {
+      console.error("Failed to load more author messages:", error);
+    } finally {
+      isLoadingRef.current = false;
+      setIsLoadingMore(false);
+    }
+  }, [fetchAuthorMessages, localMessages.length, totalCount]);
 
   // Sync when messages prop changes
   React.useEffect(() => {
     setLocalMessages(messages);
-  }, [messages]);
+    loadedIdsRef.current = new Set(messages.map((message) => message.id));
+    hasMoreRef.current = messages.length < totalCount;
+  }, [messages, totalCount]);
 
   React.useEffect(() => {
     const socket = getRealtimeSocket();
@@ -72,7 +116,11 @@ export function AuthorMessageList({
         if (prev.some((message) => message.id === payload.id)) {
           return prev;
         }
-        return [payload, ...prev];
+        const isOwnMessage = isOwnAuthorPage;
+        const nextMessage: Message = isOwnMessage
+          ? { ...payload, userId: currentUserId }
+          : payload;
+        return [nextMessage, ...prev];
       });
     };
 
@@ -90,7 +138,23 @@ export function AuthorMessageList({
       socket.off("message:created", onCreated);
       socket.off("message:deleted", onDeleted);
     };
-  }, [authorTag]);
+  }, [authorTag, currentUserId, isOwnAuthorPage]);
+
+  React.useEffect(() => {
+    if (!observerTarget.current || !hasMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMoreMessages();
+        }
+      },
+      { threshold: 0.1, rootMargin: "200px" },
+    );
+
+    observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [loadMoreMessages]);
 
   const handleDelete = React.useCallback(async (messageId: string) => {
     pendingDeleteIdsRef.current.add(messageId);
@@ -124,18 +188,25 @@ export function AuthorMessageList({
   }, [refreshAuthorMessages]);
 
   return (
-    <div className="space-y-0">
-      {localMessages.map((message) => (
-        <MessageCard
-          key={message.id}
-          message={message}
-          showAuthorMeta={false}
-          align="left"
-          withHorizontalInset={false}
-          currentUserId={currentUserId}
-          onDelete={handleDelete}
-        />
-      ))}
-    </div>
+    <>
+      <div className="space-y-0">
+        {localMessages.map((message) => (
+          <MessageCard
+            key={message.id}
+            message={message}
+            showAuthorMeta={false}
+            align="left"
+            withHorizontalInset={false}
+            currentUserId={currentUserId}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+      <div ref={observerTarget} className="flex justify-center py-8">
+        {isLoadingMore ? (
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        ) : null}
+      </div>
+    </>
   );
 }

@@ -4,7 +4,11 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageFeed } from "@/components/message-feed";
-import { generateNextChar } from "@/lib/write-run/shared";
+import { CustomScrollArea } from "@/components/custom-scroll-area";
+import {
+  generateNextChar,
+  isWriteRunCharAllowed,
+} from "@/lib/write-run/shared";
 import { Send } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import type {
@@ -36,6 +40,13 @@ function formatDisplayText(text: string) {
     }
   }
   return out;
+}
+
+function normalizeInitialCharForRun(char: string | undefined): string | null {
+  if (!char) return "";
+  if (char.length !== 1) return null;
+  const normalized = char.toLowerCase();
+  return isWriteRunCharAllowed(normalized) ? normalized : null;
 }
 
 export default function HomePage() {
@@ -97,7 +108,11 @@ export default function HomePage() {
       ) {
         return null;
       }
-      parsed.initialChar = parsed.initialChar ?? "";
+      const normalizedInitial = normalizeInitialCharForRun(parsed.initialChar);
+      if (normalizedInitial === null) {
+        return null;
+      }
+      parsed.initialChar = normalizedInitial;
       return parsed;
     } catch (error) {
       console.warn("[write-run] local draft: failed to load", error);
@@ -223,7 +238,11 @@ export default function HomePage() {
       getSessionId();
 
       const localDraft = loadLocalDraft();
-      if (localDraft && localDraft.run.expiresAt > Date.now()) {
+      if (
+        localDraft &&
+        localDraft.run.expiresAt > Date.now() &&
+        localDraft.finalText.trim().length > 0
+      ) {
         setRun(localDraft.run);
         initialCharRef.current = localDraft.initialChar ?? "";
         consumedRef.current = localDraft.consumedCount;
@@ -233,6 +252,7 @@ export default function HomePage() {
         setStatus("Local draft restored");
         return;
       }
+      clearLocalDraft();
 
       await createRun();
     };
@@ -242,11 +262,7 @@ export default function HomePage() {
       setStatus(`Init failed: ${e instanceof Error ? e.message : "unknown"}`);
     });
     return undefined;
-  }, [
-    createRun,
-    getSessionId,
-    loadLocalDraft,
-  ]);
+  }, [createRun, clearLocalDraft, getSessionId, loadLocalDraft]);
 
   React.useEffect(() => {
     if (!run) return;
@@ -288,9 +304,15 @@ export default function HomePage() {
     if (valueRef.current.length > 0) return;
     if (!char || char.length !== 1) return;
 
-    initialCharRef.current = char;
-    valueRef.current = char;
-    setValue(char);
+    const normalized = char.toLowerCase();
+    if (!isWriteRunCharAllowed(normalized)) {
+      setStatus("First character must match allowed run alphabet");
+      return;
+    }
+
+    initialCharRef.current = normalized;
+    valueRef.current = normalized;
+    setValue(normalized);
   }, []);
 
   const deleteOne = React.useCallback(() => {
@@ -326,6 +348,15 @@ export default function HomePage() {
       ops: opsRef.current,
     };
 
+    const normalizedInitial = normalizeInitialCharForRun(payload.initialChar);
+    if (normalizedInitial === null) {
+      setStatus("Rejected: invalid initial character");
+      setIsSubmitting(false);
+      clearLocalDraft();
+      return;
+    }
+    payload.initialChar = normalizedInitial;
+
     console.log("[write-run] commit: sending payload", {
       runId: payload.runId,
       consumedCount: payload.consumedCount,
@@ -357,6 +388,19 @@ export default function HomePage() {
           setStatus("Login required to commit");
           return;
         }
+
+        if (
+          result.reason === "run-not-found" ||
+          result.reason === "run-expired" ||
+          result.reason === "token-expired" ||
+          result.reason === "stale-token"
+        ) {
+          setStatus("Run expired on server. Regenerating...");
+          clearLocalDraft();
+          await createRun(true);
+          return;
+        }
+
         setStatus(`Rejected: ${result.reason ?? "unknown"}`);
         return;
       }
@@ -427,6 +471,7 @@ export default function HomePage() {
 
   const showCooldownSpinner = isFocused && isInputLocked && value.length === 0;
   const displayValue = formatDisplayText(value);
+  const displayedIterations = consumedRef.current + (value.length > 0 ? 1 : 0);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -567,13 +612,13 @@ export default function HomePage() {
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">
-                  {consumedRef.current} iterations
+                  {displayedIterations} iterations
                 </span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  className={`h-5 w-5 text-muted-foreground/70 hover:text-muted-foreground ${
+                  className={`h-5 w-5 font-semibold text-muted-foreground/70 hover:text-muted-foreground ${
                     isLoadingNewSeed ? "opacity-50 animate-pulse" : ""
                   }`}
                   aria-label="Reset input"
@@ -592,13 +637,13 @@ export default function HomePage() {
                     <path
                       d="M6 6l12 12M18 6l-12 12"
                       stroke="currentColor"
-                      strokeWidth="1.5"
+                      strokeWidth="3"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   </svg>
                 </Button>
-                <p className="text-xs text-muted-foreground">{status}</p>
+                <p className="text-xs text-muted-foreground/60">{status}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -628,7 +673,7 @@ export default function HomePage() {
                       <path
                         d="M6 10l6 6 6-6"
                         stroke="currentColor"
-                        strokeWidth="1.5"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -641,9 +686,9 @@ export default function HomePage() {
                       className="size-4"
                     >
                       <path
-                        d="M5 12h14"
+                        d="M5 12.5h14"
                         stroke="currentColor"
-                        strokeWidth="1.5"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -659,9 +704,9 @@ export default function HomePage() {
       {/* Messages Feed - Scrollable list */}
       {isMessageFeedOpen && (
         <div className="bg-background flex-1 min-h-0">
-          <div className="overflow-y-auto h-full px-4 py-12">
+          <CustomScrollArea viewportClassName="scrollbar-none px-4 py-12">
             <MessageFeed />
-          </div>
+          </CustomScrollArea>
         </div>
       )}
     </div>

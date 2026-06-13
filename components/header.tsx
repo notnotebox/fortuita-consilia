@@ -23,9 +23,7 @@ export function Header() {
   const displayName =
     session?.user?.name || session?.user?.email?.split("@")[0] || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
-  const myMessagesHref = session?.user
-    ? `/author/${getUserTag(session.user)}`
-    : "/";
+  const myMessagesHref = session?.user ? `/${getUserTag(session.user)}` : "/";
 
   return (
     <header className="border-b border-border">
@@ -41,7 +39,9 @@ export function Header() {
                   height={25}
                   className="h-7 w-auto"
                 />
-                <H1 className="text-2xl lg:text-3xl">Fortuita Consilia</H1>
+                <H1 className="text-2xl font-[575] lg:text-3xl">
+                  Fortuita Consilia
+                </H1>
               </Link>
             </div>
             <div className="flex items-center gap-2">
@@ -82,7 +82,10 @@ export function Header() {
                         className="inline-flex items-center gap-1.5"
                       >
                         My messages
-                        <MessageSquare className="size-3.5" aria-hidden="true" />
+                        <MessageSquare
+                          className="size-3.5"
+                          aria-hidden="true"
+                        />
                       </Link>
                     </Button>
                     <Button
@@ -119,6 +122,3 @@ export function Header() {
     </header>
   );
 }
-
-
-

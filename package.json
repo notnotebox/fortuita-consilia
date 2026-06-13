@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "node server.mjs",
+    "dev:next": "next dev",
+    "dev:webpack": "next dev --webpack",
+    "dev:turbo": "next dev --turbo",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.mjs",
+    "start:next": "next start",
     "lint": "eslint"
   },
   "dependencies": {

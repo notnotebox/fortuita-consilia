@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggleGroup } from "@/components/theme-toggle-group";
 import { ExternalLink as ExternalLinkIcon, Star } from "lucide-react";
 import { AboutCopyToggle } from "./about-copy-toggle";
 
@@ -85,7 +86,7 @@ function TechList({
               <span key={link.href} className="inline-flex items-center gap-1.5">
                 {index > 0 && (
                   <span aria-hidden="true" className="text-border">
-                    ·
+                    •
                   </span>
                 )}
                 <ExternalLink href={link.href}>{link.label}</ExternalLink>
@@ -129,7 +130,7 @@ export default function AboutPage() {
                     <span>
                       {item.links.map((link, index) => (
                         <span key={link.href}>
-                          {index > 0 ? <span className="text-border"> · </span> : null}
+                          {index > 0 ? <span className="text-border"> • </span> : null}
                           <ExternalLink href={link.href}>{link.label}</ExternalLink>
                         </span>
                       ))}
@@ -146,17 +147,25 @@ export default function AboutPage() {
                 <ExternalLink
                   href="https://github.com/notnotebox/fortuita-consilia"
                   underline={false}
-                >
+                  className="inline-flex items-center gap-1.5"
+                                  >
                   GitHub
                   <Star className="size-3.5" aria-hidden="true" />
                 </ExternalLink>
               </Button>
               <Button asChild variant="ghost">
-                <Link href="/" className="inline-flex items-center gap-1.5">
-                  Portfolio
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-1.5"
+                  title="View Fortuita Consilia in portfolio"
+                >
+                  View in Portfolio
                   <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
                 </Link>
               </Button>
+              <div className="ml-auto">
+                <ThemeToggleGroup />
+              </div>
             </div>
           </section>
         </div>
@@ -164,3 +173,5 @@ export default function AboutPage() {
     </div>
   );
 }
+
+
