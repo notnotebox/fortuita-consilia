@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { type Message } from "@/components/message-card";
-import { AuthorMessageList } from "@/components/author-message-list";
+import { MessageList } from "@/components/message-list";
 import { prisma } from "@/lib/prisma";
 import { buildPainMetrics, toPublicMessageId } from "@/lib/message-metrics";
 import { getUserTag } from "@/lib/user-tag";
@@ -89,9 +89,9 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
   });
 
   return (
-    <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
-      <article className="w-full max-w-2xl bg-background/20 px-5 py-6 sm:px-8 sm:py-9">
-        <div className="space-y-16">
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <div className="shrink-0 bg-background/20 pt-8 sm:pt-12">
+        <div className="mx-auto w-full max-w-2xl px-5 py-6 sm:px-8 sm:py-9">
           <header>
             <h1 className="font-heading text-3xl leading-tight sm:text-4xl">
               Author.
@@ -101,7 +101,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
             </p>
           </header>
 
-          <section className="mx-auto w-full space-y-5 sm:w-xl">
+          <section className="mx-auto mt-8 w-full space-y-5 sm:mt-12 sm:w-xl">
             <div className="flex items-center justify-between gap-6">
               <div className="inline-flex min-w-0 items-center gap-3">
                 <Avatar size="lg">
@@ -149,22 +149,20 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
               </Button>
             </div>
           </section>
-
-          <section className="mx-auto w-full sm:w-xl">
-            {messages.length > 0 ? (
-              <AuthorMessageList
-                messages={messages}
-                currentUserId={currentUserId}
-                authorId={author.id}
-                authorTag={tag}
-                totalCount={totalMessages}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">No messages yet.</p>
-            )}
-          </section>
         </div>
-      </article>
+      </div>
+
+      <div className="min-h-0 flex-1 bg-background">
+          <MessageList
+            source={{ kind: "author", authorId: author.id }}
+            initialMessages={messages}
+            totalCount={totalMessages}
+            layout="author"
+            maxLines={5}
+            scroll="fill"
+            viewportClassName="py-8 sm:py-12"
+          />
+      </div>
     </div>
   );
 }

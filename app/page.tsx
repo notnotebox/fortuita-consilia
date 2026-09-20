@@ -3,8 +3,8 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageFeed } from "@/components/message-feed";
-import { CustomScrollArea } from "@/components/custom-scroll-area";
+import { MessageList } from "@/components/message-list";
+import { CustomScrollbar } from "@/components/custom-scroll-area";
 import {
   generateNextChar,
   isWriteRunCharAllowed,
@@ -485,6 +485,7 @@ export default function HomePage() {
                 className={`absolute bottom-0 left-0 w-full min-h-7 resize-none rounded-none border-0 border-b border-input bg-transparent dark:bg-transparent pl-0 py-1.5 text-sm leading-6 caret-transparent break-all overflow-x-hidden focus-visible:border-ring focus-visible:ring-0 ${
                   isLoadingNewSeed ? "opacity-50" : ""
                 }`}
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 ref={textareaRef}
                 rows={1}
                 value={
@@ -571,6 +572,7 @@ export default function HomePage() {
                   }
                 }}
               />
+              <CustomScrollbar viewportRef={textareaRef} />
               {showCooldownSpinner ? (
                 <span
                   aria-hidden="true"
@@ -704,9 +706,12 @@ export default function HomePage() {
       {/* Messages Feed - Scrollable list */}
       {isMessageFeedOpen && (
         <div className="bg-background flex-1 min-h-0">
-          <CustomScrollArea viewportClassName="scrollbar-none px-4 py-12">
-            <MessageFeed />
-          </CustomScrollArea>
+          <MessageList
+            source={{ kind: "all" }}
+            maxLines={5}
+            scroll="fill"
+            viewportClassName="scrollbar-none py-12"
+          />
         </div>
       )}
     </div>

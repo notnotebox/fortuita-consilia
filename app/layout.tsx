@@ -21,7 +21,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Fortuita Consilia",
-  description: "Guided by grace, coding with faith",
+  description:
+    "Fortuita Consilia. A project undertaken for reasons that do not necessarily require explanation.",
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",
@@ -68,4 +69,3 @@ export default function RootLayout({
     </html>
   );
 }
-

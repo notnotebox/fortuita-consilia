@@ -4,8 +4,18 @@ import * as React from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { CustomScrollArea } from "@/components/custom-scroll-area";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { normalizeUserTag } from "@/lib/user-tag";
-import { Crosshair, Flag, Origami, Trash2 } from "lucide-react";
+import { ArrowUpRight, Flag, Origami, Trash2 } from "lucide-react";
 
 function formatDisplayText(text: string) {
   if (!text) return text;
@@ -49,6 +59,11 @@ interface MessageCardProps {
   withHorizontalInset?: boolean;
   currentUserId?: string;
   onDelete?: (messageId: string) => Promise<void>;
+  truncateContent?: boolean;
+  maxLines?: number | null;
+  scrollContent?: boolean;
+  contentMaxHeight?: number;
+  detailsLayout?: "side" | "inline";
 }
 
 export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
@@ -61,6 +76,11 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
       withHorizontalInset = true,
       currentUserId,
       onDelete,
+      truncateContent = true,
+      maxLines = 5,
+      scrollContent = false,
+      contentMaxHeight,
+      detailsLayout = "side",
     },
     ref,
   ) => {
@@ -73,16 +93,50 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
     const isOwner =
       currentUserId && message.userId && currentUserId === message.userId;
     const [isDeleting, setIsDeleting] = React.useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+    const hasTextLimit = truncateContent && typeof maxLines === "number" && maxLines > 0;
+    const isTextScrollable = hasTextLimit || scrollContent;
+    const textMaxHeight = hasTextLimit
+      ? Math.ceil(maxLines * 1.625 * 14)
+      : contentMaxHeight;
+    const [hasScrolledText, setHasScrolledText] = React.useState(false);
+    const messageLinkClassName = hasScrolledText
+      ? "bg-gradient-to-r from-transparent via-foreground/10 to-foreground/20 text-foreground ring-1 ring-foreground/20 hover:text-foreground"
+      : "text-muted-foreground/70 hover:text-muted-foreground";
+    const contentClasses = "rounded-md bg-muted/10 py-0 text-sm text-muted-foreground break-words whitespace-pre-wrap leading-relaxed text-left";
+
+    const renderMessageContent = (mobile = false) => {
+      if (isTextScrollable && textMaxHeight) {
+        return (
+          <CustomScrollArea
+            autoHeight
+            maxHeight={textMaxHeight}
+            className={mobile ? "mb-2" : undefined}
+            viewportClassName={contentClasses}
+            contentClassName="min-h-12 pr-4"
+            onViewportScroll={(scrollTop) => {
+              if (scrollTop > 2) setHasScrolledText(true);
+            }}
+            onViewportPointerLeave={() => setHasScrolledText(false)}
+          >
+            {displayContent}
+          </CustomScrollArea>
+        );
+      }
+
+      return (
+        <div className={mobile ? `${contentClasses} mb-2` : contentClasses}>
+          {displayContent}
+        </div>
+      );
+    };
 
     const handleDelete = async () => {
-      if (
-        onDelete &&
-        !isDeleting &&
-        window.confirm("Delete this message permanently?")
-      ) {
+      if (onDelete && !isDeleting) {
         setIsDeleting(true);
         try {
           await onDelete(message.id);
+          setIsDeleteDialogOpen(false);
         } finally {
           setIsDeleting(false);
         }
@@ -90,22 +144,39 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
     };
 
     return (
-      <div ref={ref} className="w-full py-4">
+      <>
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this message?</DialogTitle>
+              <DialogDescription>
+                This action is permanent. The message will be removed from the feed and cannot be recovered.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={isDeleting}>Cancel</Button>
+              </DialogClose>
+              <Button variant="destructive" onClick={() => void handleDelete()} disabled={isDeleting}>
+                {isDeleting ? "Deleting..." : "Delete message"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <div ref={ref} data-message-card className="w-full py-4">
         <div
           className={`mx-auto w-full max-w-6xl ${
             withHorizontalInset ? "px-2 sm:px-4" : ""
           }`}
         >
           <div
-            className={`relative w-full max-w-2xl sm:w-xl ${
+            className={`relative w-full max-w-xl ${
               align === "center" ? "mx-auto" : ""
             }`}
           >
             {/* Mobile layout */}
-            <div className="min-[740px]:hidden">
-              <div className="rounded-md bg-muted/10 py-0 text-sm text-muted-foreground break-words whitespace-pre-wrap leading-relaxed min-h-12 text-left mb-2">
-                {displayContent}
-              </div>
+            <div className={detailsLayout === "inline" ? "" : "min-[740px]:hidden"}>
+              {renderMessageContent(true)}
 
               <div
                 className={`flex items-center gap-2 ${showAuthorMeta ? "justify-between" : "justify-end"}`}
@@ -152,12 +223,12 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                       asChild
                       variant="ghost"
                       size="icon-xs"
-                      className="text-muted-foreground/70 hover:text-muted-foreground"
-                      aria-label="Focus this message"
-                      title="Focus this message"
+                      className={messageLinkClassName}
+                      aria-label="Read full message"
+                      title="Read full message"
                     >
                       <Link href={messageHref}>
-                        <Crosshair className="size-3" aria-hidden="true" />
+                        <ArrowUpRight className="size-3" aria-hidden="true" />
                       </Link>
                     </Button>
                   ) : null}
@@ -176,7 +247,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                     title={
                       isOwner ? "Delete this message" : "Report this message"
                     }
-                    onClick={isOwner ? handleDelete : undefined}
+                    onClick={isOwner ? () => setIsDeleteDialogOpen(true) : undefined}
                     disabled={isDeleting}
                   >
                     {isOwner ? (
@@ -189,7 +260,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
               </div>
             </div>
 
-            {showAuthorMeta ? (
+            {showAuthorMeta && detailsLayout !== "inline" ? (
               <div className="absolute top-0 right-full mr-4 hidden w-[7.5rem] min-[740px]:block">
                 <div className="flex items-center gap-2">
                   <Link
@@ -212,7 +283,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
               </div>
             ) : null}
 
-            <div className="absolute top-0 left-full ml-4 hidden min-[740px]:block">
+            <div className={detailsLayout === "inline" ? "hidden" : "absolute top-0 left-full ml-4 hidden min-[740px]:block"}>
               <div className="inline-flex items-start gap-4">
                 <div className="inline-flex flex-col items-start whitespace-nowrap">
                   <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">
@@ -232,12 +303,12 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                     asChild
                     variant="ghost"
                     size="icon-xs"
-                    className="text-muted-foreground/70 hover:text-muted-foreground"
-                    aria-label="Focus this message"
-                    title="Focus this message"
+                    className={messageLinkClassName}
+                    aria-label="Read full message"
+                    title="Read full message"
                   >
                     <Link href={messageHref}>
-                      <Crosshair className="size-3" aria-hidden="true" />
+                      <ArrowUpRight className="size-3" aria-hidden="true" />
                     </Link>
                   </Button>
                 ) : null}
@@ -256,7 +327,7 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                   title={
                     isOwner ? "Delete this message" : "Report this message"
                   }
-                  onClick={isOwner ? handleDelete : undefined}
+                    onClick={isOwner ? () => setIsDeleteDialogOpen(true) : undefined}
                   disabled={isDeleting}
                 >
                   {isOwner ? (
@@ -269,12 +340,13 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
             </div>
 
             {/* Desktop layout */}
-            <div className="hidden min-[740px]:block rounded-md bg-muted/10 py-0 text-sm text-muted-foreground break-words whitespace-pre-wrap leading-relaxed min-h-12 text-left">
-              {displayContent}
+            <div className={detailsLayout === "inline" ? "hidden" : "hidden min-[740px]:block"}>
+              {renderMessageContent()}
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </>
     );
   },
 );

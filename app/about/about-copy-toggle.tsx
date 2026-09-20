@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Languages as LanguagesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const FR_PARAGRAPHS = [
   "Chaque caractère est généré indépendamment, dans un processus où l'intention et la détermination s'érodent de concert, laissant le message s'altérer à mesure qu'il prend forme.",
@@ -140,18 +146,26 @@ export function AboutCopyToggle() {
 
   return (
     <section className="relative space-y-4 pr-10 sm:pr-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={handleToggleLanguage}
-        disabled={isAnimating}
-        className="absolute right-0 top-0 size-8 text-muted-foreground sm:-right-10"
-        title={isEnglish ? "Switch to French" : "Switch to English"}
-        aria-label={isEnglish ? "Switch to French" : "Switch to English"}
-      >
-        <LanguagesIcon className="size-4" aria-hidden="true" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleLanguage}
+              disabled={isAnimating}
+              className="absolute right-0 top-0 size-8 text-muted-foreground sm:-right-10"
+              aria-label={isEnglish ? "Switch to French" : "Switch to English"}
+            >
+              <LanguagesIcon className="size-4" aria-hidden="true" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {isEnglish ? "Switch to French" : "Switch to English"}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {displayedParagraphs.map((paragraph, index) => {
         const isActive = activeTransition?.paragraphIndex === index;
