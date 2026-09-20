@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggleGroup } from "@/components/theme-toggle-group";
-import { ExternalLink as ExternalLinkIcon, Star } from "lucide-react";
+import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { AboutCopyToggle } from "./about-copy-toggle";
 
 const linkClassName = "underline-offset-4 transition-colors hover:underline";
@@ -148,9 +148,8 @@ export default function AboutPage() {
                   href="https://github.com/notnotebox/fortuita-consilia"
                   underline={false}
                   className="inline-flex items-center gap-1.5"
-                                  >
+                >
                   GitHub
-                  <Star className="size-3.5" aria-hidden="true" />
                 </ExternalLink>
               </Button>
               <Button asChild variant="ghost">
