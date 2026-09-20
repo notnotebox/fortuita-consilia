@@ -30,31 +30,32 @@ export default async function AuthorMessagePage({ params }: AuthorMessagePagePro
   const shortId = fromPublicMessageId(rawId);
   if (!shortId) notFound();
 
-  const session = await auth();
-  const currentUserId = session?.user?.id;
-
-  const dbMessage = await prisma.message.findUnique({
-    where: { shortId },
-    select: {
-      id: true,
-      shortId: true,
-      content: true,
-      tries: true,
-      consumedCount: true,
-      length: true,
-      createdAt: true,
-      authorId: true,
-      author: {
-        select: {
-          id: true,
-          name: true,
-          discordTag: true,
-          email: true,
-          image: true,
+  const [session, dbMessage] = await Promise.all([
+    auth(),
+    prisma.message.findUnique({
+      where: { shortId },
+      select: {
+        id: true,
+        shortId: true,
+        content: true,
+        tries: true,
+        consumedCount: true,
+        length: true,
+        createdAt: true,
+        authorId: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            discordTag: true,
+            email: true,
+            image: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
+  const currentUserId = session?.user?.id;
 
   if (!dbMessage || !dbMessage.author) {
     notFound();

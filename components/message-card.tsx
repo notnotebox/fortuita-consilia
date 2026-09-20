@@ -75,7 +75,11 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
     const [isDeleting, setIsDeleting] = React.useState(false);
 
     const handleDelete = async () => {
-      if (onDelete && !isDeleting) {
+      if (
+        onDelete &&
+        !isDeleting &&
+        window.confirm("Delete this message permanently?")
+      ) {
         setIsDeleting(true);
         try {
           await onDelete(message.id);

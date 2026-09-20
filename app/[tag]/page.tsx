@@ -48,20 +48,25 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
   const displayTag = author.discordTag || tag.replace(/-/g, ".");
   const isLongTag = displayTag.length > 14;
 
-  const initialDbMessages = await prisma.message.findMany({
-    where: { authorId: author.id },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    select: {
-      id: true,
-      shortId: true,
-      content: true,
-      tries: true,
-      consumedCount: true,
-      length: true,
-      createdAt: true,
-    },
-  });
+  const [initialDbMessages, totalMessages] = await Promise.all([
+    prisma.message.findMany({
+      where: { authorId: author.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        shortId: true,
+        content: true,
+        tries: true,
+        consumedCount: true,
+        length: true,
+        createdAt: true,
+      },
+    }),
+    prisma.message.count({
+      where: { authorId: author.id },
+    }),
+  ]);
 
   const messages: Message[] = initialDbMessages.map((message) => {
     const metrics = buildPainMetrics({
@@ -81,10 +86,6 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
       authorTag: tag,
       userId: currentUserId && currentUserId === author.id ? author.id : undefined,
     };
-  });
-
-  const totalMessages = await prisma.message.count({
-    where: { authorId: author.id },
   });
 
   return (

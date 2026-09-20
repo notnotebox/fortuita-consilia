@@ -177,6 +177,7 @@ export function hashOps(
 
 export async function createRun(requesterId: string): Promise<RunStartResponse> {
   cleanupRefreshState();
+  await cleanupExpiredRuns();
 
   const now = Date.now();
   enforceStartCooldown(requesterId, now);
@@ -274,8 +275,6 @@ function replayRun(run: PersistedRun, payload: CommitPayload): CommitResponse {
 }
 
 export async function verifyCommit(payload: CommitPayload): Promise<CommitResponse> {
-  await cleanupExpiredRuns();
-
   payload.initialChar = payload.initialChar ?? "";
 
   const tokenPayload = verifyToken(payload.token);
