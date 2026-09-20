@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { emitMessageDeleted } from "@/lib/realtime/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -61,8 +60,6 @@ export async function POST(request: NextRequest) {
     await prisma.message.delete({
       where: { id: messageId },
     });
-
-    emitMessageDeleted({ id: messageId });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const requesterId = getRequesterIdFromHeaders(request.headers);
 
   try {
-    const started = createRun(requesterId);
+    const started = await createRun(requesterId);
     return NextResponse.json(started, { status: 201 });
   } catch (error) {
     if (error instanceof StartRunCooldownError) {

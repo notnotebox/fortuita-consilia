@@ -5,12 +5,12 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { generateNextChar, isWriteRunCharAllowed } from "@/lib/write-run/shared";
+import { prisma } from "@/lib/prisma";
 import type {
   ClientRunTokenPayload,
   CommitPayload,
   CommitResponse,
   RunStartResponse,
-  RunState,
 } from "@/lib/write-run/types";
 
 const RUN_TTL_MS = 1000 * 60 * 20;
@@ -25,16 +25,23 @@ if (!writeRunSecretEnv && process.env.NODE_ENV === "production") {
 }
 const WRITE_RUN_SECRET = writeRunSecretEnv ?? "dev-write-run-secret-change-me";
 
-type Store = Map<string, RunState>;
 type RefreshState = {
   windowStartedAt: number;
   attempts: number;
   lastIssuedAt: number;
 };
 type RefreshStore = Map<string, RefreshState>;
+type PersistedRun = {
+  runId: string;
+  publicSeed: string;
+  expiresAt: number;
+  maxOps: number;
+  maxConsumed: number;
+  tokenVersion: number;
+  committed: boolean;
+};
 
 declare global {
-  var __WRITE_RUN_STORE__: Store | undefined;
   var __WRITE_RUN_REFRESH_STORE__: RefreshStore | undefined;
 }
 
@@ -45,13 +52,6 @@ export class StartRunCooldownError extends Error {
     super("start-run-cooldown");
     this.retryAfterMs = retryAfterMs;
   }
-}
-
-function getStore(): Store {
-  if (!globalThis.__WRITE_RUN_STORE__) {
-    globalThis.__WRITE_RUN_STORE__ = new Map<string, RunState>();
-  }
-  return globalThis.__WRITE_RUN_STORE__;
 }
 
 function getRefreshStore(): RefreshStore {
@@ -111,16 +111,6 @@ export function verifyToken(token: string): ClientRunTokenPayload | null {
   }
 }
 
-function cleanupExpiredRuns(): void {
-  const now = Date.now();
-  const store = getStore();
-  for (const [runId, state] of store.entries()) {
-    if (state.expiresAt <= now || state.committed) {
-      store.delete(runId);
-    }
-  }
-}
-
 function cleanupRefreshState(): void {
   const now = Date.now();
   const store = getRefreshStore();
@@ -156,6 +146,12 @@ function enforceStartCooldown(requesterId: string, now: number): void {
   store.set(requesterId, current);
 }
 
+async function cleanupExpiredRuns(): Promise<void> {
+  await prisma.writeRun.deleteMany({
+    where: { expiresAt: { lte: new Date() } },
+  });
+}
+
 function derivePublicSeed(runId: string, nonce: string): string {
   return createHmac("sha256", WRITE_RUN_SECRET)
     .update(`${runId}:${nonce}`)
@@ -179,9 +175,8 @@ export function hashOps(
     .digest("base64url");
 }
 
-export function createRun(requesterId: string): RunStartResponse {
+export async function createRun(requesterId: string): Promise<RunStartResponse> {
   cleanupRefreshState();
-  cleanupExpiredRuns();
 
   const now = Date.now();
   enforceStartCooldown(requesterId, now);
@@ -190,38 +185,36 @@ export function createRun(requesterId: string): RunStartResponse {
   const nonce = randomBytes(16).toString("base64url");
   const expiresAt = now + RUN_TTL_MS;
 
-  const state: RunState = {
-    runId,
-    publicSeed: derivePublicSeed(runId, nonce),
-    createdAt: now,
-    expiresAt,
-    maxOps: MAX_OPS,
-    maxConsumed: MAX_CONSUMED,
-    tokenVersion: 1,
-    committed: false,
-  };
-
-  getStore().set(runId, state);
+  const publicSeed = derivePublicSeed(runId, nonce);
+  await prisma.writeRun.create({
+    data: {
+      runId,
+      publicSeed,
+      expiresAt: new Date(expiresAt),
+      maxOps: MAX_OPS,
+      maxConsumed: MAX_CONSUMED,
+    },
+  });
 
   const token = signToken({
     runId,
     iat: now,
     exp: expiresAt,
-    tokenVersion: state.tokenVersion,
+    tokenVersion: 1,
     nonce,
   });
 
   return {
     runId,
     token,
-    seed: state.publicSeed,
-    expiresAt: state.expiresAt,
-    maxOps: state.maxOps,
-    maxConsumed: state.maxConsumed,
+    seed: publicSeed,
+    expiresAt,
+    maxOps: MAX_OPS,
+    maxConsumed: MAX_CONSUMED,
   };
 }
 
-function replayRun(run: RunState, payload: CommitPayload): CommitResponse {
+function replayRun(run: PersistedRun, payload: CommitPayload): CommitResponse {
   let consumedCount = 0;
   let opCount = 0;
   let text = payload.initialChar;
@@ -280,8 +273,8 @@ function replayRun(run: RunState, payload: CommitPayload): CommitResponse {
   return { ok: true, serverText: text, consumedCount };
 }
 
-export function verifyCommit(payload: CommitPayload): CommitResponse {
-  cleanupExpiredRuns();
+export async function verifyCommit(payload: CommitPayload): Promise<CommitResponse> {
+  await cleanupExpiredRuns();
 
   payload.initialChar = payload.initialChar ?? "";
 
@@ -299,10 +292,22 @@ export function verifyCommit(payload: CommitPayload): CommitResponse {
     return { ok: false, reason: "token-expired" };
   }
 
-  const run = getStore().get(payload.runId);
-  if (!run) {
+  const storedRun = await prisma.writeRun.findUnique({
+    where: { runId: payload.runId },
+  });
+  if (!storedRun) {
     return { ok: false, reason: "run-not-found" };
   }
+
+  const run: PersistedRun = {
+    runId: storedRun.runId,
+    publicSeed: storedRun.publicSeed,
+    expiresAt: storedRun.expiresAt.getTime(),
+    maxOps: storedRun.maxOps,
+    maxConsumed: storedRun.maxConsumed,
+    tokenVersion: storedRun.tokenVersion,
+    committed: storedRun.committed,
+  };
 
   if (run.committed) {
     return { ok: false, reason: "run-already-committed" };
@@ -349,8 +354,13 @@ export function verifyCommit(payload: CommitPayload): CommitResponse {
     return result;
   }
 
-  run.committed = true;
-  getStore().set(run.runId, run);
+  const claimed = await prisma.writeRun.updateMany({
+    where: { runId: run.runId, committed: false },
+    data: { committed: true },
+  });
+  if (claimed.count !== 1) {
+    return { ok: false, reason: "run-already-committed" };
+  }
 
   return {
     ok: true,

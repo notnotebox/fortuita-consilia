@@ -1,20 +1,24 @@
 "use client";
 
-import { io, type Socket } from "socket.io-client";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let socket: Socket | null = null;
+let client: SupabaseClient | null = null;
 
-export function getRealtimeSocket(): Socket {
-  if (socket) return socket;
+export function getRealtimeClient(): SupabaseClient | null {
+  if (client) return client;
 
-  socket = io({
-    path: "/socket.io",
-    transports: ["websocket"],
-    autoConnect: true,
-    timeout: 1500,
-    reconnectionAttempts: 2,
-    reconnectionDelayMax: 2000,
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !publicKey) return null;
+
+  client = createClient(url, publicKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
   });
 
-  return socket;
+  return client;
 }

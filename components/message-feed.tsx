@@ -3,12 +3,9 @@
 import * as React from "react";
 import { MessageCard, type Message } from "./message-card";
 import { useSession } from "next-auth/react";
-import { getRealtimeSocket } from "@/lib/realtime/client";
+import { getRealtimeClient } from "@/lib/realtime/client";
 import { getUserTag } from "@/lib/user-tag";
-import type {
-  MessageCreatedEvent,
-  MessageDeletedEvent,
-} from "@/lib/realtime/types";
+import { toPublicMessageId } from "@/lib/message-metrics";
 
 interface MessageFeedProps {
   onLoadMore?: () => Promise<Message[]>;
@@ -206,23 +203,23 @@ export const MessageFeed = React.forwardRef<HTMLDivElement, MessageFeedProps>(
     React.useEffect(() => {
       if (onLoadMore) return;
 
-      const socket = getRealtimeSocket();
+      const supabase = getRealtimeClient();
 
-      const onCreated = (payload: MessageCreatedEvent) => {
-        if (pendingDeleteIdsRef.current.has(payload.id)) return;
+      const addCreatedMessage = (message: Message) => {
+        if (pendingDeleteIdsRef.current.has(message.id)) return;
 
         setMessages((prev) => {
-          if (prev.some((message) => message.id === payload.id)) {
+          if (prev.some((item) => item.id === message.id)) {
             return prev;
           }
           const isOwnMessage =
             Boolean(currentUserId) &&
             Boolean(currentUserTag) &&
-            payload.authorTag === currentUserTag;
+            message.authorTag === currentUserTag;
           const nextMessage: Message = isOwnMessage
-            ? { ...payload, userId: currentUserId }
-            : payload;
-          loadedIdsRef.current.add(payload.id);
+            ? { ...message, userId: currentUserId }
+            : message;
+          loadedIdsRef.current.add(message.id);
           skipRef.current += 1;
           hasMoreRef.current = true;
           setHasMore(true);
@@ -230,24 +227,57 @@ export const MessageFeed = React.forwardRef<HTMLDivElement, MessageFeedProps>(
         });
       };
 
-      const onDeleted = (payload: MessageDeletedEvent) => {
+      const onCreated = async (payload: { new: Record<string, unknown> }) => {
+        const id = typeof payload.new.id === "string" ? payload.new.id : null;
+        const shortId = typeof payload.new.shortId === "string" ? payload.new.shortId : null;
+        if (!id || !shortId || pendingDeleteIdsRef.current.has(id)) return;
+
+        const response = await fetch(`/api/messages/${toPublicMessageId(shortId)}`);
+        if (!response.ok) return;
+        addCreatedMessage((await response.json()) as Message);
+      };
+
+      const onDeleted = (payload: { old: Record<string, unknown> }) => {
+        const id = typeof payload.old.id === "string" ? payload.old.id : null;
+        if (!id) return;
         setMessages((prev) => {
-          if (!prev.some((message) => message.id === payload.id)) {
+          if (!prev.some((message) => message.id === id)) {
             return prev;
           }
-          loadedIdsRef.current.delete(payload.id);
+          loadedIdsRef.current.delete(id);
           skipRef.current = Math.max(0, skipRef.current - 1);
-          pendingDeleteIdsRef.current.delete(payload.id);
-          return prev.filter((message) => message.id !== payload.id);
+          pendingDeleteIdsRef.current.delete(id);
+          return prev.filter((message) => message.id !== id);
         });
       };
 
-      socket.on("message:created", onCreated);
-      socket.on("message:deleted", onDeleted);
+      const channel = supabase
+        ? supabase
+            .channel("public-messages")
+            .on(
+              "postgres_changes",
+              { event: "INSERT", schema: "public", table: "Message" },
+              onCreated,
+            )
+            .on(
+              "postgres_changes",
+              { event: "DELETE", schema: "public", table: "Message" },
+              onDeleted,
+            )
+            .subscribe()
+        : null;
+      const pollTimer = window.setInterval(async () => {
+        const latest = await fetchMessages(0, 10);
+        for (const message of [...latest].reverse()) {
+          addCreatedMessage(message);
+        }
+      }, 10_000);
 
       return () => {
-        socket.off("message:created", onCreated);
-        socket.off("message:deleted", onDeleted);
+        window.clearInterval(pollTimer);
+        if (channel && supabase) {
+          void supabase.removeChannel(channel);
+        }
       };
     }, [currentUserId, currentUserTag, onLoadMore]);
 

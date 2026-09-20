@@ -92,7 +92,7 @@ export function Header() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start gap-1.5"
+                      className="w-full justify-start gap-1.5 text-destructive/70 hover:text-destructive"
                       onClick={async () => {
                         await signOut({ redirect: false });
                         router.refresh();

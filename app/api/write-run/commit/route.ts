@@ -4,10 +4,6 @@ import type { CommitPayload } from "@/lib/write-run/types";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "node:crypto";
-import {
-  buildCreatedMessagePayload,
-  emitMessageCreated,
-} from "@/lib/realtime/server";
 
 export const runtime = "nodejs";
 
@@ -52,7 +48,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = verifyCommit(payload);
+  const result = await verifyCommit(payload);
   if (!result.ok) {
     return NextResponse.json(result, { status: 400 });
   }
@@ -61,7 +57,7 @@ export async function POST(request: Request) {
   const seed = result.seed ?? "";
 
   const shortId = await reserveShortId();
-  const createdMessage = await prisma.message.create({
+  await prisma.message.create({
     data: {
       shortId,
       content: payload.finalText,
@@ -93,8 +89,6 @@ export async function POST(request: Request) {
       },
     },
   });
-
-  emitMessageCreated(buildCreatedMessagePayload(createdMessage));
 
   return NextResponse.json(result, { status: 200 });
 }

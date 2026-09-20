@@ -88,3 +88,16 @@ model DailyUptime {
   source    String   @default("server")
   createdAt DateTime @default(now())
 }
+
+model WriteRun {
+  runId        String   @id @db.Uuid
+  publicSeed   String
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  maxOps       Int
+  maxConsumed  Int
+  tokenVersion Int      @default(1)
+  committed    Boolean  @default(false)
+
+  @@index([expiresAt])
+}

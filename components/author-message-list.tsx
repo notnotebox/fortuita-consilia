@@ -2,11 +2,8 @@
 
 import React from "react";
 import { MessageCard, type Message } from "./message-card";
-import { getRealtimeSocket } from "@/lib/realtime/client";
-import type {
-  MessageCreatedEvent,
-  MessageDeletedEvent,
-} from "@/lib/realtime/types";
+import { getRealtimeClient } from "@/lib/realtime/client";
+import { toPublicMessageId } from "@/lib/message-metrics";
 
 interface AuthorMessageListProps {
   messages: Message[];
@@ -106,39 +103,58 @@ export function AuthorMessageList({
   }, [messages, totalCount]);
 
   React.useEffect(() => {
-    const socket = getRealtimeSocket();
+    const supabase = getRealtimeClient();
+    if (!supabase) return;
 
-    const onCreated = (payload: MessageCreatedEvent) => {
-      if (payload.authorTag !== authorTag) return;
-      if (pendingDeleteIdsRef.current.has(payload.id)) return;
+    const onCreated = async (payload: { new: Record<string, unknown> }) => {
+      const id = typeof payload.new.id === "string" ? payload.new.id : null;
+      const shortId = typeof payload.new.shortId === "string" ? payload.new.shortId : null;
+      if (!id || !shortId || pendingDeleteIdsRef.current.has(id)) return;
+
+      const response = await fetch(`/api/messages/${toPublicMessageId(shortId)}`);
+      if (!response.ok) return;
+      const message = (await response.json()) as Message;
+      if (message.authorTag !== authorTag) return;
 
       setLocalMessages((prev) => {
-        if (prev.some((message) => message.id === payload.id)) {
+        if (prev.some((item) => item.id === message.id)) {
           return prev;
         }
         const isOwnMessage = isOwnAuthorPage;
         const nextMessage: Message = isOwnMessage
-          ? { ...payload, userId: currentUserId }
-          : payload;
+          ? { ...message, userId: currentUserId }
+          : message;
         return [nextMessage, ...prev];
       });
     };
 
-    const onDeleted = (payload: MessageDeletedEvent) => {
-      pendingDeleteIdsRef.current.delete(payload.id);
+    const onDeleted = (payload: { old: Record<string, unknown> }) => {
+      const id = typeof payload.old.id === "string" ? payload.old.id : null;
+      if (!id) return;
+      pendingDeleteIdsRef.current.delete(id);
       setLocalMessages((prev) =>
-        prev.filter((message) => message.id !== payload.id),
+        prev.filter((message) => message.id !== id),
       );
     };
 
-    socket.on("message:created", onCreated);
-    socket.on("message:deleted", onDeleted);
+    const channel = supabase
+      .channel(`author-messages-${authorId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "Message" },
+        onCreated,
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "Message" },
+        onDeleted,
+      )
+      .subscribe();
 
     return () => {
-      socket.off("message:created", onCreated);
-      socket.off("message:deleted", onDeleted);
+      void supabase.removeChannel(channel);
     };
-  }, [authorTag, currentUserId, isOwnAuthorPage]);
+  }, [authorId, authorTag, currentUserId, isOwnAuthorPage]);
 
   React.useEffect(() => {
     if (!observerTarget.current || !hasMoreRef.current) return;
