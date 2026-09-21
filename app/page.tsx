@@ -494,6 +494,10 @@ export default function HomePage() {
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 ref={textareaRef}
                 rows={1}
+                inputMode="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={
                   isFocused
                     ? isInputLocked
@@ -503,7 +507,6 @@ export default function HomePage() {
                         : `${displayValue}_`
                     : displayValue
                 }
-                readOnly
                 onInput={autoResize}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
@@ -554,8 +557,21 @@ export default function HomePage() {
                 }}
                 onBeforeInput={(event) => {
                   const nativeEvent = event.nativeEvent as InputEvent;
-                  if (nativeEvent.inputType?.startsWith("delete")) return;
+                  if (nativeEvent.inputType?.startsWith("delete")) {
+                    event.preventDefault();
+                    deleteOne();
+                    return;
+                  }
+
                   event.preventDefault();
+                  if (isInputLocked || !run) return;
+
+                  const input = nativeEvent.data ?? "";
+                  if (valueRef.current.length === 0) {
+                    appendInitialChar(input.slice(0, 1));
+                  } else if (input) {
+                    appendRandom();
+                  }
                 }}
                 onPaste={(event) => {
                   event.preventDefault();
