@@ -29,7 +29,7 @@ export function ToggleGroup({
     <ToggleGroupContext.Provider value={{ value, onValueChange }}>
       <div
         role="group"
-        aria-label="Toggle group"
+        aria-label="Theme selection"
         className={cn(
           "inline-flex items-center gap-1",
           className,

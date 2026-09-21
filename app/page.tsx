@@ -495,6 +495,7 @@ export default function HomePage() {
                 ref={textareaRef}
                 rows={1}
                 inputMode="text"
+                aria-label="Message input"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}

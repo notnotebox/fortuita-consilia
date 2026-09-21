@@ -22,9 +22,14 @@ const discordClientId =
   process.env.DISCORD_CLIENT_ID?.trim() || process.env.AUTH_DISCORD_ID?.trim();
 const discordClientSecret =
   process.env.DISCORD_CLIENT_SECRET?.trim() || process.env.AUTH_DISCORD_SECRET?.trim();
+const authSecret = process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim();
 
 if (!discordClientId || !discordClientSecret) {
   throw new Error("Missing Discord OAuth env vars (DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET).");
+}
+
+if (!authSecret && process.env.NODE_ENV === "production") {
+  throw new Error("AUTH_SECRET is required in production.");
 }
 
 function buildDiscordTag(profile: DiscordMe): string {
@@ -103,7 +108,7 @@ async function syncDiscordProfile(input: {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: wrapAdapterForDbOutage(PrismaAdapter(prisma)),
   basePath: "/api/auth",
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  secret: authSecret,
   pages: {
     signOut: "/",
   },

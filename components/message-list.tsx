@@ -101,13 +101,15 @@ export function MessageList({
     [session?.user],
   );
   const sourceKey = getSourceKey(source);
+  const sourceAuthorId = source.kind === "author" ? source.authorId : undefined;
+  const sourceMessageId = source.kind === "single" ? source.messageId : undefined;
   const stableSource = React.useMemo<MessageListSource>(
     () => {
-      if (source.kind === "author") return { kind: "author", authorId: source.authorId };
-      if (source.kind === "single") return { kind: "single", messageId: source.messageId };
+      if (source.kind === "author") return { kind: "author", authorId: sourceAuthorId! };
+      if (source.kind === "single") return { kind: "single", messageId: sourceMessageId! };
       return { kind: "all" };
     },
-    [sourceKey],
+    [source.kind, sourceAuthorId, sourceMessageId],
   );
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = React.useState(source.kind !== "single" && initialMessages.length === 0);

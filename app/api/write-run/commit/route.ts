@@ -4,8 +4,11 @@ import type { CommitPayload } from "@/lib/write-run/types";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "node:crypto";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+const MAX_COMMIT_BODY_BYTES = 1_000_000;
+const COMMITS_PER_MINUTE = 10;
 
 function generateShortId(): string {
   return randomBytes(9)
@@ -37,10 +40,34 @@ export async function POST(request: Request) {
     );
   }
 
+  const rate = checkRateLimit({
+    key: `write-run:commit:user:${authorId}`,
+    max: COMMITS_PER_MINUTE,
+    windowMs: 60_000,
+  });
+  if (rate.limited) {
+    return NextResponse.json(
+      { ok: false, reason: "rate-limited" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rate.retryAfterMs / 1000)) } },
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_COMMIT_BODY_BYTES) {
+    return NextResponse.json({ ok: false, reason: "request-too-large" }, { status: 413 });
+  }
+
   let payload: CommitPayload;
 
   try {
-    payload = (await request.json()) as CommitPayload;
+    const parsed = await request.json();
+    if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as { ops?: unknown }).ops)) {
+      return NextResponse.json({ ok: false, reason: "invalid-payload" }, { status: 400 });
+    }
+    if ((parsed as { ops: unknown[] }).ops.length > 8000) {
+      return NextResponse.json({ ok: false, reason: "too-many-ops" }, { status: 400 });
+    }
+    payload = parsed as CommitPayload;
   } catch {
     return NextResponse.json(
       { ok: false, reason: "invalid-json" },
@@ -53,7 +80,10 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: 400 });
   }
 
-  const opsCount = payload.ops.reduce((sum, op) => sum + op.n, 0);
+  const opsCount = payload.ops.reduce(
+    (sum, op) => sum + (Number.isFinite(op.n) ? op.n : 0),
+    0,
+  );
   const seed = result.seed ?? "";
 
   const shortId = await reserveShortId();
