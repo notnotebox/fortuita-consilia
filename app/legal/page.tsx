@@ -5,6 +5,8 @@ import { PencilLine } from "lucide-react";
 const textClassName = "text-[0.98rem] leading-7";
 
 export default function LegalPage() {
+  const portfolioUrl = process.env.NEXT_PUBLIC_PORTFOLIO_URL?.trim();
+
   return (
     <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
       <article className="w-full max-w-2xl bg-background/20 px-5 py-6 sm:px-8 sm:py-9">
@@ -14,33 +16,39 @@ export default function LegalPage() {
               Legal.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.95rem]">
-              The present project is provided &quot;as is&quot;, without any
-              express or implied warranty.
+              A few essential rules for using this open-source service.
             </p>
           </header>
 
           <section className="space-y-4">
             <p className={textClassName}>
-              The author shall not be held liable for any direct or indirect
-              damage resulting from the use or inability to use the application.
+              The service is provided as is. It may change, pause, or stop
+              without notice.
             </p>
             <p className={textClassName}>
-              The service may be modified, suspended, or discontinued at any
-              time, without prior notice.
+              You are responsible for what you publish. Do not submit unlawful,
+              harmful, abusive, or sensitive content.
             </p>
             <p className={textClassName}>
-              Users are solely responsible for the content they submit. Any
-              abusive, unlawful, or harmful use of the platform is strictly
-              prohibited.
+              Do not disrupt the service, bypass its limits, or access another
+              person’s account or data.
             </p>
             <p className={textClassName}>
-              No guarantee is given regarding service availability, reliability,
-              or performance.
+              By using the service, you accept these rules and the Privacy policy.
             </p>
-            <p className={textClassName}>
-              Use of this application implies full and unconditional acceptance
-              of these provisions.
+          </section>
+
+          <section className="space-y-4 text-sm leading-6 text-muted-foreground">
+            <p>
+              The source code is open source. The service is hosted on Vercel.
+              Availability and third-party infrastructure are not guaranteed.
             </p>
+            {portfolioUrl ? (
+              <p>
+                The maintainer and contact details are available through the{" "}
+                <a className="underline underline-offset-4" href={portfolioUrl} target="_blank" rel="noreferrer">portfolio</a>.
+              </p>
+            ) : null}
           </section>
 
           <section className="space-y-16">

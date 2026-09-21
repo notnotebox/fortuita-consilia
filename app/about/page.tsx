@@ -53,11 +53,13 @@ function ExternalLink({
   children,
   className = "",
   underline = true,
+  title,
 }: {
   href: string;
   children: React.ReactNode;
   className?: string;
   underline?: boolean;
+  title?: string;
 }) {
   return (
     <Link
@@ -65,6 +67,7 @@ function ExternalLink({
       target="_blank"
       rel="noreferrer"
       className={`${underline ? linkClassName : linkClassNameNoUnderline} ${className}`.trim()}
+      title={title}
     >
       {children}
     </Link>
@@ -83,7 +86,10 @@ function TechList({
           <dt className={labelClassName}>{item.label}</dt>
           <dd className="flex flex-wrap items-center gap-1.5">
             {item.links.map((link, index) => (
-              <span key={link.href} className="inline-flex items-center gap-1.5">
+              <span
+                key={link.href}
+                className="inline-flex items-center gap-1.5"
+              >
                 {index > 0 && (
                   <span aria-hidden="true" className="text-border">
                     •
@@ -130,8 +136,12 @@ export default function AboutPage() {
                     <span>
                       {item.links.map((link, index) => (
                         <span key={link.href}>
-                          {index > 0 ? <span className="text-border"> • </span> : null}
-                          <ExternalLink href={link.href}>{link.label}</ExternalLink>
+                          {index > 0 ? (
+                            <span className="text-border"> • </span>
+                          ) : null}
+                          <ExternalLink href={link.href}>
+                            {link.label}
+                          </ExternalLink>
                         </span>
                       ))}
                     </span>
@@ -148,6 +158,7 @@ export default function AboutPage() {
                   href="https://github.com/notnotebox/fortuita-consilia"
                   underline={false}
                   className="inline-flex items-center gap-1.5"
+                  title="View Fortuita Consilia on GitHub"
                 >
                   GitHub
                 </ExternalLink>
@@ -156,9 +167,9 @@ export default function AboutPage() {
                 <Link
                   href="/"
                   className="inline-flex items-center gap-1.5"
-                  title="View Fortuita Consilia in portfolio"
+                  title="Learn more about Fortuita Consilia"
                 >
-                  View in Portfolio
+                  Learn more
                   <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
                 </Link>
               </Button>
@@ -172,5 +183,3 @@ export default function AboutPage() {
     </div>
   );
 }
-
-

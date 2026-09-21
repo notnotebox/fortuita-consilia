@@ -3,47 +3,29 @@
 import * as React from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Moon, Sun } from "lucide-react";
-
-type ThemeMode = "light" | "dark";
-
-const THEME_KEY = "fc-theme";
-
-function applyTheme(theme: ThemeMode) {
-  const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark");
-}
+import { useTheme } from "next-themes";
 
 export function ThemeToggleGroup() {
-  const [theme, setTheme] = React.useState<ThemeMode>("light");
+  const { resolvedTheme, setTheme, theme } = useTheme();
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    const nextTheme: ThemeMode =
-      stored === "dark" || stored === "light"
-        ? stored
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
     setReady(true);
   }, []);
 
   const updateTheme = React.useCallback((nextValue: string) => {
     if (nextValue !== "light" && nextValue !== "dark") return;
-    const nextTheme = nextValue as ThemeMode;
-    setTheme(nextTheme);
-    localStorage.setItem(THEME_KEY, nextTheme);
-    applyTheme(nextTheme);
-  }, []);
+    setTheme(nextValue);
+  }, [setTheme]);
 
-  if (!ready) {
+  const activeTheme = theme === "system" ? resolvedTheme : theme;
+
+  if (!ready || !activeTheme) {
     return null;
   }
 
   return (
-    <ToggleGroup value={theme} onValueChange={updateTheme}>
+    <ToggleGroup value={activeTheme} onValueChange={updateTheme}>
       <ToggleGroupItem
         value="light"
         title="Switch to light theme"

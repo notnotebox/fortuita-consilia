@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/daily-uptime",
       "schedule": "45 23 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-inactive-users",
+      "schedule": "15 3 * * *"
     }
   ]
 }

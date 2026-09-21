@@ -56,10 +56,13 @@ export default function HomePage() {
   const [value, setValue] = React.useState("");
   const [isFocused, setIsFocused] = React.useState(false);
   const [run, setRun] = React.useState<RunStartResponse | null>(null);
-  const [status, setStatus] = React.useState<string>("Preparing run...");
+  // Internal write-run status kept for diagnostics and error handling; it is
+  // intentionally not rendered because the transient debug label is not user-facing.
+  const [, setStatus] = React.useState<string>("Preparing run...");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingNewSeed, setIsLoadingNewSeed] = React.useState(false);
   const [isInputLocked, setIsInputLocked] = React.useState(false);
+  const [hasInputOverflow, setHasInputOverflow] = React.useState(false);
   const [isMessageFeedOpen, setIsMessageFeedOpen] = React.useState(true);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -324,6 +327,7 @@ export default function HomePage() {
       clearLocalDraft();
       void createRun(true);
     } else {
+      consumedRef.current = Math.max(0, consumedRef.current - 1);
       pushOp("D");
     }
   }, [clearLocalDraft, pushOp, createRun]);
@@ -458,7 +462,9 @@ export default function HomePage() {
     const nextHeight = Math.min(el.scrollHeight, maxHeight);
     const finalHeight = Math.max(nextHeight, minHeight);
     el.style.height = `${finalHeight}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+    const hasOverflow = el.scrollHeight > el.clientHeight + 1;
+    setHasInputOverflow(hasOverflow);
+    el.style.overflowY = hasOverflow ? "auto" : "hidden";
   }, [MAX_VISIBLE_LINES]);
 
   React.useEffect(() => {
@@ -482,7 +488,7 @@ export default function HomePage() {
             <div ref={containerRef} className="relative w-full">
               <Textarea
                 placeholder={showCooldownSpinner ? "" : "If you must, begin..."}
-                className={`absolute bottom-0 left-0 w-full min-h-7 resize-none rounded-none border-0 border-b border-input bg-transparent dark:bg-transparent pl-0 py-1.5 text-sm leading-6 caret-transparent break-all overflow-x-hidden focus-visible:border-ring focus-visible:ring-0 ${
+                className={`absolute bottom-0 left-0 w-full min-h-7 resize-none rounded-none border-0 border-b border-input bg-transparent dark:bg-transparent pl-0 py-1.5 text-sm leading-6 caret-transparent break-all overflow-x-hidden overflow-y-auto scrollbar-none focus-visible:border-ring focus-visible:ring-0 ${
                   isLoadingNewSeed ? "opacity-50" : ""
                 }`}
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -572,7 +578,10 @@ export default function HomePage() {
                   }
                 }}
               />
-              <CustomScrollbar viewportRef={textareaRef} />
+              <CustomScrollbar
+                viewportRef={textareaRef}
+                enabled={hasInputOverflow}
+              />
               {showCooldownSpinner ? (
                 <span
                   aria-hidden="true"
@@ -613,7 +622,7 @@ export default function HomePage() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
+                <span className="w-[4.5rem] shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                   {displayedIterations} iterations
                 </span>
                 <Button
@@ -645,7 +654,6 @@ export default function HomePage() {
                     />
                   </svg>
                 </Button>
-                <p className="text-xs text-muted-foreground/60">{status}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button

@@ -20,10 +20,11 @@ const TRACK_INSET_PX = 8;
 
 type CustomScrollbarProps = {
   viewportRef: React.RefObject<HTMLElement | null>;
+  enabled?: boolean;
 };
 
 /** The shared scrollbar used by both scroll areas and standalone inputs. */
-export function CustomScrollbar({ viewportRef }: CustomScrollbarProps) {
+export function CustomScrollbar({ viewportRef, enabled = true }: CustomScrollbarProps) {
   const [thumbTop, setThumbTop] = React.useState(0);
   const [thumbHeight, setThumbHeight] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
@@ -56,6 +57,12 @@ export function CustomScrollbar({ viewportRef }: CustomScrollbarProps) {
   }, [viewportRef]);
 
   React.useLayoutEffect(() => {
+    if (!enabled) {
+      setThumbHeight(0);
+      setThumbTop(0);
+      return;
+    }
+
     const element = viewportRef.current;
     if (!element) return;
 
@@ -69,7 +76,7 @@ export function CustomScrollbar({ viewportRef }: CustomScrollbarProps) {
       element.removeEventListener("scroll", recalc);
       window.removeEventListener("resize", recalc);
     };
-  }, [recalc, viewportRef]);
+  }, [enabled, recalc, viewportRef]);
 
   React.useEffect(() => {
     if (!dragging) return;
@@ -102,7 +109,7 @@ export function CustomScrollbar({ viewportRef }: CustomScrollbarProps) {
     };
   }, [dragging, thumbHeight, viewportRef]);
 
-  if (thumbHeight <= 0) return null;
+  if (!enabled || thumbHeight <= 0) return null;
 
   return (
     <div className="pointer-events-none absolute right-1 top-0 z-10 h-full w-2">

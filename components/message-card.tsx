@@ -101,8 +101,8 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
       : contentMaxHeight;
     const [hasScrolledText, setHasScrolledText] = React.useState(false);
     const messageLinkClassName = hasScrolledText
-      ? "bg-gradient-to-r from-transparent via-foreground/10 to-foreground/20 text-foreground ring-1 ring-foreground/20 hover:text-foreground"
-      : "text-muted-foreground/70 hover:text-muted-foreground";
+      ? "text-foreground hover:bg-muted/20 hover:text-foreground"
+      : "text-muted-foreground/70 hover:text-foreground";
     const contentClasses = "rounded-md bg-muted/10 py-0 text-sm text-muted-foreground break-words whitespace-pre-wrap leading-relaxed text-left";
 
     const renderMessageContent = (mobile = false) => {
@@ -115,9 +115,8 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
             viewportClassName={contentClasses}
             contentClassName="min-h-12 pr-4"
             onViewportScroll={(scrollTop) => {
-              if (scrollTop > 2) setHasScrolledText(true);
+              setHasScrolledText(scrollTop > 2);
             }}
-            onViewportPointerLeave={() => setHasScrolledText(false)}
           >
             {displayContent}
           </CustomScrollArea>

@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,23 @@ import { auth } from "@/auth";
 type AuthorPageProps = {
   params: Promise<{ tag: string }>;
 };
+
+function UnavailableAuthorPage() {
+  return (
+    <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
+      <article className="w-full max-w-2xl bg-background/20 px-5 py-6 sm:px-8 sm:py-9">
+        <header>
+          <h1 className="font-heading text-3xl leading-tight sm:text-4xl">
+            Author.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.95rem]">
+            This author or their messages are not publicly available.
+          </p>
+        </header>
+      </article>
+    </div>
+  );
+}
 
 function formatDateLabel(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -41,7 +57,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
   });
 
   const author = users.find((user) => getUserTag(user) === tag);
-  if (!author) notFound();
+  if (!author) return <UnavailableAuthorPage />;
 
   const pseudo = author.name || author.email?.split("@")[0] || "Unknown";
   const initials = pseudo.slice(0, 2).toUpperCase();
@@ -87,6 +103,8 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
       userId: currentUserId && currentUserId === author.id ? author.id : undefined,
     };
   });
+
+  if (totalMessages === 0) return <UnavailableAuthorPage />;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
