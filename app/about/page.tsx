@@ -4,6 +4,14 @@ import { ThemeToggleGroup } from "@/components/theme-toggle-group";
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { AboutCopyToggle } from "./about-copy-toggle";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "The idea, mechanics, and open-source foundations behind Fortuita Consilia.",
+};
+
 const linkClassName = "underline-offset-4 transition-colors hover:underline";
 const linkClassNameNoUnderline = "transition-colors";
 const labelClassName = "uppercase tracking-[0.12em]";

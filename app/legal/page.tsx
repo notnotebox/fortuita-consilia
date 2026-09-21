@@ -2,6 +2,14 @@
 import { Button } from "@/components/ui/button";
 import { PencilLine } from "lucide-react";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Legal",
+  description:
+    "The essential rules and responsibilities for using Fortuita Consilia.",
+};
+
 const textClassName = "text-[0.98rem] leading-7";
 
 export default function LegalPage() {

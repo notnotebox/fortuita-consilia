@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import type { Metadata } from "next";
 import { type Message } from "@/components/message-card";
 import { MessageDetail } from "@/components/message-detail";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,44 @@ import {
 type MessagePageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: MessagePageProps): Promise<Metadata> {
+  const { id: rawId } = await params;
+  const shortId = fromPublicMessageId(rawId);
+
+  if (!shortId) return { title: "Message" };
+
+  const dbMessage = await prisma.message.findUnique({
+    where: { shortId },
+    select: {
+      author: { select: { name: true, email: true } },
+    },
+  });
+
+  if (!dbMessage) return { title: "Message" };
+
+  const pseudo =
+    dbMessage.author?.name || dbMessage.author?.email?.split("@")[0] || "Unknown";
+  const title = `Message by ${pseudo}`;
+  const description = "A published message on Fortuita Consilia.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "article",
+      title,
+      description,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 function formatDateLabel(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {

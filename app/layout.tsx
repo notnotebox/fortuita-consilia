@@ -7,6 +7,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { SessionProvider } from "next-auth/react";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
 const merriweather = Merriweather({
   variable: "--font-merriweather",
   subsets: ["latin"],
@@ -20,9 +22,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fortuita Consilia",
+  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  title: {
+    default: "Fortuita Consilia",
+    template: "%s — Fortuita Consilia",
+  },
   description:
     "Fortuita Consilia. A project undertaken for reasons that do not necessarily require explanation.",
+  applicationName: "Fortuita Consilia",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Fortuita Consilia",
+    title: "Fortuita Consilia",
+    description:
+      "A project undertaken for reasons that do not necessarily require explanation.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Fortuita Consilia",
+    description:
+      "A project undertaken for reasons that do not necessarily require explanation.",
+  },
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",

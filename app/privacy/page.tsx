@@ -4,6 +4,14 @@ import { PencilLine } from "lucide-react";
 import { DeleteAccountButton } from "@/components/delete-account-button";
 import { auth } from "@/auth";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy",
+  description:
+    "What Fortuita Consilia stores, why it is needed, and how to delete your data.",
+};
+
 const textClassName = "text-[0.98rem] leading-7";
 
 export default async function PrivacyPage() {

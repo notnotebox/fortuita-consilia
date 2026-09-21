@@ -8,10 +8,35 @@ import { buildPainMetrics, toPublicMessageId } from "@/lib/message-metrics";
 import { getUserTag } from "@/lib/user-tag";
 import { PencilLine } from "lucide-react";
 import { auth } from "@/auth";
+import type { Metadata } from "next";
 
 type AuthorPageProps = {
   params: Promise<{ tag: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: AuthorPageProps): Promise<Metadata> {
+  const { tag } = await params;
+  const users = await prisma.user.findMany({
+    where: { messages: { some: {} } },
+    select: { name: true, email: true },
+  });
+  const author = users.find((user) => getUserTag(user) === tag);
+
+  if (!author) {
+    return {
+      title: "Author",
+      description: "This page is unavailable.",
+    };
+  }
+
+  const pseudo = author.name || author.email?.split("@")[0] || "Unknown";
+  return {
+    title: `${pseudo} — Author`,
+    description: `Published messages by ${pseudo} on Fortuita Consilia.`,
+  };
+}
 
 function UnavailableAuthorPage() {
   return (
@@ -22,7 +47,7 @@ function UnavailableAuthorPage() {
             Author.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.95rem]">
-            This author or their messages are not publicly available.
+            This page is unavailable.
           </p>
         </header>
       </article>

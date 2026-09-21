@@ -1,6 +1,13 @@
 ﻿import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Ways to get in touch about Fortuita Consilia.",
+};
+
 export default function ContactPage() {
   return (
     <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
