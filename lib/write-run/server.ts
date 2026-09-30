@@ -245,6 +245,8 @@ function replayRun(run: PersistedRun, payload: CommitPayload): CommitResponse {
       }
 
       if (op.t === "D") {
+        // A deletion only changes the visible text. consumedCount remains
+        // monotonic: replay must preserve the complete generation history.
         text = text.slice(0, -1);
         continue;
       }

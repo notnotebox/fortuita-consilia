@@ -327,7 +327,9 @@ export default function HomePage() {
       clearLocalDraft();
       void createRun(true);
     } else {
-      consumedRef.current = Math.max(0, consumedRef.current - 1);
+      // Deleting changes the visible text, but never rewinds the generation
+      // history. The next generated character must continue the same ACID
+      // sequence so the server can verify every write and deletion.
       pushOp("D");
     }
   }, [clearLocalDraft, pushOp, createRun]);
