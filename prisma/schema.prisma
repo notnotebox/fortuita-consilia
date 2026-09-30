@@ -45,6 +45,7 @@ model Message {
   author            User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   createdAt         DateTime @default(now())
+  reports           Report[]
 }
 
 model Account {
@@ -101,4 +102,21 @@ model WriteRun {
   committed    Boolean  @default(false)
 
   @@index([expiresAt])
+}
+
+model Report {
+  id              String    @id @default(uuid()) @db.Uuid
+  messageId       String?   @db.Uuid
+  messagePublicId String    @db.VarChar(14)
+  authorName      String    @db.Text
+  authorTag       String    @db.Text
+  reason          String?   @db.Text
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+  reviewedAt      DateTime?
+
+  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([messagePublicId])
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CustomScrollArea } from "@/components/custom-scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogClose,
@@ -94,6 +95,10 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
       currentUserId && message.userId && currentUserId === message.userId;
     const [isDeleting, setIsDeleting] = React.useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+    const [isReportDialogOpen, setIsReportDialogOpen] = React.useState(false);
+    const [isReporting, setIsReporting] = React.useState(false);
+    const [reportReason, setReportReason] = React.useState("");
+    const [reportError, setReportError] = React.useState<string | null>(null);
     const hasTextLimit = truncateContent && typeof maxLines === "number" && maxLines > 0;
     const isTextScrollable = hasTextLimit || scrollContent;
     const textMaxHeight = hasTextLimit
@@ -142,6 +147,42 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
       }
     };
 
+    const handleReport = async () => {
+      if (!message.publicId || isReporting) return;
+      setIsReporting(true);
+      setReportError(null);
+
+      try {
+        const response = await fetch("/api/messages/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messageId: message.publicId,
+            reason: reportReason,
+          }),
+        });
+
+        const result = (await response.json()) as {
+          ok?: boolean;
+          reason?: string;
+        };
+        if (!response.ok || !result.ok) {
+          throw new Error(result.reason || "reporting-failed");
+        }
+
+        setReportReason("");
+        setIsReportDialogOpen(false);
+      } catch (error) {
+        setReportError(
+          error instanceof Error && error.message === "rate-limited"
+            ? "Too many reports. Please try again later."
+            : "The report could not be sent. Please try again later.",
+        );
+      } finally {
+        setIsReporting(false);
+      }
+    };
+
     return (
       <>
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -158,6 +199,48 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
               </DialogClose>
               <Button variant="destructive" onClick={() => void handleDelete()} disabled={isDeleting}>
                 {isDeleting ? "Deleting..." : "Delete message"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog
+          open={isReportDialogOpen}
+          onOpenChange={(open) => {
+            setIsReportDialogOpen(open);
+            if (!open) {
+              setReportReason("");
+              setReportError(null);
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Report this message?</DialogTitle>
+              <DialogDescription>
+                Reports are anonymous and can be submitted without signing in.
+                The message stays in the private moderation queue. Discord only
+                receives a neutral notification.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value)}
+              placeholder="Optional context"
+              maxLength={1000}
+              aria-label="Reason for report"
+              disabled={isReporting}
+            />
+            {reportError ? (
+              <p className="text-sm text-destructive">{reportError}</p>
+            ) : null}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={isReporting}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button onClick={() => void handleReport()} disabled={isReporting}>
+                {isReporting ? "Sending..." : "Send report"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -246,7 +329,11 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                     title={
                       isOwner ? "Delete this message" : "Report this message"
                     }
-                    onClick={isOwner ? () => setIsDeleteDialogOpen(true) : undefined}
+                    onClick={
+                      isOwner
+                        ? () => setIsDeleteDialogOpen(true)
+                        : () => setIsReportDialogOpen(true)
+                    }
                     disabled={isDeleting}
                   >
                     {isOwner ? (
@@ -326,7 +413,11 @@ export const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
                   title={
                     isOwner ? "Delete this message" : "Report this message"
                   }
-                    onClick={isOwner ? () => setIsDeleteDialogOpen(true) : undefined}
+                    onClick={
+                      isOwner
+                        ? () => setIsDeleteDialogOpen(true)
+                        : () => setIsReportDialogOpen(true)
+                    }
                   disabled={isDeleting}
                 >
                   {isOwner ? (
