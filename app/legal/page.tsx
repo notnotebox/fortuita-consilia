@@ -44,6 +44,11 @@ export default function LegalPage() {
             <p className={textClassName}>
               By using the service, you accept these rules and the Privacy policy.
             </p>
+            <p className={textClassName}>
+              Anonymous reports may preserve the reported message ID, a copy of
+              its content, the reported account ID, and the reported account
+              name in the private moderation queue for safety purposes.
+            </p>
           </section>
 
           <section className="space-y-4 text-sm leading-6 text-muted-foreground">

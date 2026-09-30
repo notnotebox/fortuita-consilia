@@ -1,0 +1,6 @@
+ALTER TABLE "Report"
+ADD COLUMN "messageContent" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "authorId" UUID;
+
+ALTER TABLE "Report"
+ALTER COLUMN "messageContent" DROP DEFAULT;

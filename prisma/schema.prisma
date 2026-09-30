@@ -108,6 +108,8 @@ model Report {
   id              String    @id @default(uuid()) @db.Uuid
   messageId       String?   @db.Uuid
   messagePublicId String    @db.VarChar(14)
+  messageContent  String    @db.Text
+  authorId        String?   @db.Uuid
   authorName      String    @db.Text
   authorTag       String    @db.Text
   reason          String?   @db.Text

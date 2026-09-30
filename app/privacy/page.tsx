@@ -44,14 +44,13 @@ export default async function PrivacyPage() {
             </p>
             <p className={textClassName}>
               Messages can be reported anonymously without signing in. A
-              report contains a reference to the reported message, its public
-              author details, and any optional context you provide. It does
-              not include the reporter&apos;s account information. Reports are
-              stored in a private moderation queue hosted with the service. A neutral
-              notification may be sent to Discord, but the message content and
-              report context are not sent there. Reports may be kept
-              indefinitely for safety and moderation purposes. They are not
-              published, sold, or used for advertising.
+              report contains the message ID, a copy of the message content,
+              the reported account ID and public name, and any optional context
+              you provide. It does not include the reporter&apos;s account
+              information. Reports are stored in a private moderation queue
+              hosted with the service. Reports may be kept indefinitely for
+              safety and moderation purposes. They are not published, sold, or
+              used for advertising.
             </p>
             <p className={textClassName}>
               Do not submit sensitive personal information in a message.

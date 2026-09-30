@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 type Report = {
   id: string;
   messagePublicId: string;
+  messageContent: string;
+  authorId: string | null;
   authorName: string;
   authorTag: string;
   reason: string | null;
   status: string;
   createdAt: string;
   reviewedAt: string | null;
-  message: { content: string; createdAt: Date } | null;
 };
 
 export function ModerationReportList({ reports }: { reports: Report[] }) {
@@ -60,8 +61,16 @@ export function ModerationReportList({ reports }: { reports: Report[] }) {
             </div>
           </div>
           <div className="rounded-md bg-muted/10 p-4 text-sm leading-6 whitespace-pre-wrap break-words">
-            {report.message?.content ?? "This message is no longer available."}
+            {report.messageContent}
           </div>
+          <p className="text-xs text-muted-foreground">
+            Message ID: {report.messagePublicId}
+          </p>
+          {report.authorId ? (
+            <p className="text-xs text-muted-foreground">
+              Account ID: {report.authorId}
+            </p>
+          ) : null}
           {report.reason ? (
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">Context:</span>{" "}

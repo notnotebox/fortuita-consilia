@@ -130,18 +130,18 @@ Please keep experiments in a local database or a dedicated test deployment. Do n
 - An account that has published at least one message is not removed merely because it later becomes inactive.
 - The cleanup cron never deletes published messages.
 - Account deletion exports the account and its messages as JSON, then deletes the account and related data after confirmation.
-- A report does not delete or publish a message. Report records may be retained indefinitely in the application's moderation queue for safety and moderation.
+- A report does not delete or publish a message. Report records retain the message ID, a message snapshot, the reported account ID/name, and optional context. They may be retained indefinitely in the application's moderation queue for safety and moderation.
 
 ## Anonymous reports
 
-The flag action is available without signing in. It stores a small moderation record in the database containing:
+The flag action is available without signing in. It stores a moderation record in the database containing:
 
 - the reported message ID;
-- the reported author's public name/tag;
-- the message timestamp and public ID;
+- a snapshot of the reported message content;
+- the reported account ID and public name/tag;
 - optional context entered by the reporter.
 
-The reporter's Discord account, session, and identity are not stored with the report. The server uses a request-derived identifier only for a short in-memory rate limit, so anonymous reporting does not mean unlimited reporting. The original message is loaded only when an authorized moderator opens the private panel.
+The reporter's Discord account, session, and identity are not stored with the report. The server uses a request-derived identifier only for a short in-memory rate limit, so anonymous reporting does not mean unlimited reporting. The snapshot remains available to an authorized moderator even if the original message relation is later unavailable.
 
 The webhook is a secret credential used only as a notification bell. Never put it in client code, never prefix it with `NEXT_PUBLIC_`, and rotate it immediately if it is exposed. Keep the moderation channel private and review reports rather than treating the notification as an automatic verdict.
 

@@ -106,8 +106,10 @@ export async function POST(request: Request) {
     select: {
       id: true,
       shortId: true,
+      content: true,
       author: {
         select: {
+          id: true,
           name: true,
           discordTag: true,
           email: true,
@@ -129,6 +131,8 @@ export async function POST(request: Request) {
     data: {
       messageId: message.id,
       messagePublicId: toPublicMessageId(message.shortId),
+      messageContent: message.content,
+      authorId: message.author?.id ?? null,
       authorName,
       authorTag: getUserTag(message.author ?? {}),
       reason:

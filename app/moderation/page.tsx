@@ -21,18 +21,14 @@ export default async function ModerationPage() {
     select: {
       id: true,
       messagePublicId: true,
+      messageContent: true,
+      authorId: true,
       authorName: true,
       authorTag: true,
       reason: true,
       status: true,
       createdAt: true,
       reviewedAt: true,
-      message: {
-        select: {
-          content: true,
-          createdAt: true,
-        },
-      },
     },
   });
 
