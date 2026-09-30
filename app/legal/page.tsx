@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const textClassName = "text-[0.98rem] leading-7";
 
 export default function LegalPage() {
-  const portfolioUrl = process.env.NEXT_PUBLIC_PORTFOLIO_URL?.trim();
+  const personalPageUrl = process.env.NEXT_PUBLIC_PERSONAL_PAGE_URL?.trim();
 
   return (
     <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
@@ -51,10 +51,10 @@ export default function LegalPage() {
               The source code is open source. The service is hosted on Vercel.
               Availability and third-party infrastructure are not guaranteed.
             </p>
-            {portfolioUrl ? (
+            {personalPageUrl ? (
               <p>
                 The maintainer and contact details are available through the{" "}
-                <a className="underline underline-offset-4" href={portfolioUrl} target="_blank" rel="noreferrer">portfolio</a>.
+                <a className="underline underline-offset-4" href={personalPageUrl} target="_blank" rel="noreferrer">Learn more</a>.
               </p>
             ) : null}
           </section>

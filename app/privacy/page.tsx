@@ -16,7 +16,7 @@ const textClassName = "text-[0.98rem] leading-7";
 
 export default async function PrivacyPage() {
   const session = await auth();
-  const portfolioUrl = process.env.NEXT_PUBLIC_PORTFOLIO_URL?.trim();
+  const personalPageUrl = process.env.NEXT_PUBLIC_PERSONAL_PAGE_URL?.trim();
 
   return (
     <div className="mx-auto flex w-full flex-1 items-start justify-center py-8 sm:py-12">
@@ -35,12 +35,23 @@ export default async function PrivacyPage() {
             <p className={textClassName}>
               Discord provides the account information needed to sign in and
               identify you. Published messages and their technical metadata are
-              stored with them.
+              stored in a PostgreSQL database hosted by Supabase.
             </p>
             <p className={textClassName}>
               This data is used to operate the service, protect it from abuse,
               and keep messages available. It is not sold or used for
               advertising.
+            </p>
+            <p className={textClassName}>
+              Messages can be reported anonymously without signing in. A
+              report contains a reference to the reported message, its public
+              author details, and any optional context you provide. It does
+              not include the reporter&apos;s account information. Reports are
+              stored in a private moderation queue hosted with the service. A neutral
+              notification may be sent to Discord, but the message content and
+              report context are not sent there. Reports may be kept
+              indefinitely for safety and moderation purposes. They are not
+              published, sold, or used for advertising.
             </p>
             <p className={textClassName}>
               Do not submit sensitive personal information in a message.
@@ -63,10 +74,10 @@ export default async function PrivacyPage() {
             </div>
           </section>
 
-          {portfolioUrl ? (
+          {personalPageUrl ? (
             <p className="text-sm text-muted-foreground">
               For questions about this service or your data, contact the
-              maintainer through the <a className="underline underline-offset-4" href={portfolioUrl} target="_blank" rel="noreferrer">portfolio</a>.
+              maintainer through <a className="underline underline-offset-4" href={personalPageUrl} target="_blank" rel="noreferrer">Learn more</a>.
             </p>
           ) : null}
 
