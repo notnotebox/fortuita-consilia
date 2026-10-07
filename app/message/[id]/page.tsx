@@ -1,4 +1,3 @@
-﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
