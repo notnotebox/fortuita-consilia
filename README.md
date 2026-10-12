@@ -51,6 +51,7 @@ These are the variables currently recognized by the codebase:
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | PostgreSQL connection URL used by Prisma. |
+| `DIRECT_URL` | optional | Direct PostgreSQL connection used by Prisma migrations when Supabase pooler connections should not be used for schema changes. |
 | `AUTH_SECRET` | production | Secret used to sign Auth.js sessions. `NEXTAUTH_SECRET` is still accepted as a legacy name. |
 | `DISCORD_CLIENT_ID` | for Discord sign-in | Discord OAuth client ID. `AUTH_DISCORD_ID` is still accepted as a legacy name. |
 | `DISCORD_CLIENT_SECRET` | for Discord sign-in | Discord OAuth client secret. `AUTH_DISCORD_SECRET` is still accepted as a legacy name. |
