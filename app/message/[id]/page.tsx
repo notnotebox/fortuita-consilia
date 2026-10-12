@@ -26,14 +26,13 @@ export async function generateMetadata({
   const dbMessage = await prisma.message.findUnique({
     where: { shortId },
     select: {
-      author: { select: { name: true, email: true } },
+      author: { select: { name: true } },
     },
   });
 
   if (!dbMessage) return { title: "Message" };
 
-  const pseudo =
-    dbMessage.author?.name || dbMessage.author?.email?.split("@")[0] || "Unknown";
+  const pseudo = dbMessage.author?.name || "Unknown";
   const title = `Message by ${pseudo}`;
   const description = "A published message on Fortuita Consilia.";
 
@@ -85,7 +84,6 @@ export default async function MessagePage({ params }: MessagePageProps) {
           select: {
             name: true,
             discordTag: true,
-            email: true,
             image: true,
           },
         },
@@ -110,7 +108,7 @@ export default async function MessagePage({ params }: MessagePageProps) {
     content: dbMessage.content,
     ratio: metrics.ratioLabel,
     ratioDetails: metrics.ratioDetails,
-    pseudo: dbMessage.author?.name || dbMessage.author?.email?.split("@")[0] || "Unknown",
+    pseudo: dbMessage.author?.name || "Unknown",
     avatar: dbMessage.author?.image ?? undefined,
     authorTag: getUserTag(dbMessage.author ?? {}),
     userId:

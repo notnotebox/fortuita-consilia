@@ -45,7 +45,6 @@ export default async function AuthorMessagePage({ params }: AuthorMessagePagePro
             id: true,
             name: true,
             discordTag: true,
-            email: true,
             image: true,
           },
         },
@@ -75,8 +74,7 @@ export default async function AuthorMessagePage({ params }: AuthorMessagePagePro
     content: dbMessage.content,
     ratio: metrics.ratioLabel,
     ratioDetails: metrics.ratioDetails,
-    pseudo:
-      dbMessage.author?.name || dbMessage.author?.email?.split("@")[0] || "Unknown",
+    pseudo: dbMessage.author?.name || "Unknown",
     avatar: dbMessage.author?.image ?? undefined,
     authorTag: computedTag,
     userId:

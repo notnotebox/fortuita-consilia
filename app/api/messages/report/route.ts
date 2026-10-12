@@ -112,7 +112,6 @@ export async function POST(request: Request) {
           id: true,
           name: true,
           discordTag: true,
-          email: true,
         },
       },
     },
@@ -125,8 +124,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const authorName =
-    message.author?.name || message.author?.email?.split("@")[0] || "Unknown";
+  const authorName = message.author?.name || "Unknown";
   const report = await prisma.report.create({
     data: {
       messageId: message.id,
