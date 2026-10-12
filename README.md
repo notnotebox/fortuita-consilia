@@ -1,17 +1,21 @@
 # Fortuita Consilia
 
-Fortuita Consilia is a small open-source writing experiment: type a message, accept the strange little cost of producing it, and decide whether it deserves to be published.
+Fortuita Consilia is an open-source writing experiment, built for reasons that do not necessarily need explaining.
 
-The project is intentionally simple in appearance. The interesting parts happen behind the input: a write run is issued by the server, the client records the interaction, and the server replays that interaction before accepting a message.
+You write a message, accept the sometimes strange cost of creating it, and then decide whether it deserves to be published.
+
+The interface is intentionally quiet. The interesting part happens behind the input: the server creates a writing session, the browser records the actions taken, and the server replays that interaction before accepting the message.
+
+The project is independent, a little experimental, and meant to be read, reused, and modified.
 
 ## Quick start
 
 Requirements:
 
-- Node.js 20+
-- pnpm
-- PostgreSQL (Supabase works well)
-- A Discord OAuth application for sign-in
+- Node.js 20 or newer;
+- pnpm;
+- PostgreSQL, for example Supabase;
+- a Discord OAuth application for sign-in.
 
 Install dependencies:
 
@@ -19,7 +23,7 @@ Install dependencies:
 pnpm install
 ```
 
-Create a local `.env` file from the variables below, then generate and apply the database schema:
+Create a local `.env` file using the variables listed below, then generate and apply the database schema:
 
 ```bash
 pnpm exec prisma generate
@@ -42,140 +46,156 @@ pnpm build
 
 ## Environment variables
 
-The exact names accepted by the current code are:
+These are the variables currently recognized by the codebase:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | yes | PostgreSQL connection string used by Prisma. |
-| `AUTH_SECRET` | production | Signs Auth.js sessions. `NEXTAUTH_SECRET` is accepted as a legacy fallback. |
-| `DISCORD_CLIENT_ID` | yes for Discord login | Discord OAuth client ID. `AUTH_DISCORD_ID` is accepted as a fallback. |
-| `DISCORD_CLIENT_SECRET` | yes for Discord login | Discord OAuth client secret. `AUTH_DISCORD_SECRET` is accepted as a fallback. |
-| `WRITE_RUN_SECRET` | production | Server-only HMAC key for write-run tokens and hashes. |
-| `CRON_SECRET` | production with Vercel crons | Shared secret used to authenticate scheduled maintenance requests. |
-| `NEXT_PUBLIC_SUPABASE_URL` | if realtime is used | Public Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` | if realtime is used | Public Supabase client key. |
-| `NEXT_PUBLIC_SITE_URL` | production SEO | Canonical public URL, for example `https://fortuitaconsilia.online`. |
-| `NEXT_PUBLIC_PERSONAL_PAGE_URL` | optional | Public maintainer/contact link shown as “Learn more” on Legal and Privacy. |
-| `DISCORD_REPORT_WEBHOOK_URL` | optional | Private server-side Discord webhook receiving neutral report notifications only. |
-| `MODERATOR_DISCORD_IDS` | optional | Comma-separated Discord account IDs allowed to open the moderation panel. |
-| `DB_RETRY_WINDOW_MS` | optional | Database availability retry window. |
+| `DATABASE_URL` | yes | PostgreSQL connection URL used by Prisma. |
+| `AUTH_SECRET` | production | Secret used to sign Auth.js sessions. `NEXTAUTH_SECRET` is still accepted as a legacy name. |
+| `DISCORD_CLIENT_ID` | for Discord sign-in | Discord OAuth client ID. `AUTH_DISCORD_ID` is still accepted as a legacy name. |
+| `DISCORD_CLIENT_SECRET` | for Discord sign-in | Discord OAuth client secret. `AUTH_DISCORD_SECRET` is still accepted as a legacy name. |
+| `WRITE_RUN_SECRET` | production | Private HMAC key for writing sessions and their fingerprints. |
+| `CRON_SECRET` | when scheduled tasks are enabled | Shared secret authenticating maintenance tasks. |
+| `NEXT_PUBLIC_SITE_URL` | production | Canonical public URL used for metadata, `robots.txt`, and the sitemap. |
+| `NEXT_PUBLIC_PERSONAL_PAGE_URL` | optional | Public link to the maintainer's personal page. |
+| `DISCORD_REPORT_WEBHOOK_URL` | optional | Server-side private webhook for neutral report notifications. |
+| `MODERATOR_DISCORD_IDS` | optional | Discord IDs allowed to open the moderation area. |
+| `DB_RETRY_WINDOW_MS` | optional | Database connection retry window. |
+| `PORT` | optional | Local server port. Defaults to `3000`. |
 
-Never prefix a secret with `NEXT_PUBLIC_`. The `.env` file must stay local and must not be committed.
+A variable prefixed with `NEXT_PUBLIC_` is sent to the browser. That prefix must therefore never be used for a private key, session secret, database URL, or webhook.
 
-For Vercel, add production variables in Project Settings → Environment Variables, then redeploy. Cron variables are not retroactively injected into an already-built deployment.
+The `.env` file must remain local and must not be committed.
 
 ## How publishing works
 
-Publishing is a two-step server protocol:
+Publishing relies on a server-controlled protocol:
 
-1. `POST /api/write-run/start` creates a short-lived write run in the database.
-2. The server returns a public seed and an HMAC-signed token. The client uses the seed to produce the visible writing interaction.
-3. `POST /api/write-run/commit` receives the final text and the recorded operations.
-4. The server verifies the signature, expiry, run ID, operation count, consumed character count, and final text by replaying the run server-side.
-5. The run is claimed atomically, so it cannot be committed twice. Only then is the message stored.
+1. `POST /api/write-run/start` creates a temporary writing session in the database.
+2. The server returns a public seed and a signed token. The seed is not a secret: it is part of the interaction sent to the browser.
+3. `POST /api/write-run/commit` receives the final text and the operation history.
+4. The server checks the signature, expiration, session ID, operation count, consumed character count, and final text by replaying the session.
+5. The session is claimed atomically, so it cannot be published twice. The message is stored only after these checks succeed.
 
-The browser is therefore treated as an untrusted narrator. It can describe what happened, but the server decides whether that story is internally consistent.
+The browser is treated as a narrator that cannot be fully trusted. It can describe what happened; the server decides whether that story is coherent.
 
 ## The score
 
-Messages currently expose a small experimental metric called the **pain ratio**. It is not a quality score, a moderation score, or a measure of the author. It only describes the cost of producing the text:
+Messages display a small experimental metric called the **pain ratio**. It does not measure the quality of the message, its author, or its harmfulness. It only describes the cost of producing the text:
 
 ```text
-pain score = text length + iterations × 1.35 + consumed characters × 0.85
+pain score  = text length + iterations × 1.35 + consumed characters × 0.85
 pain ratio  = pain score / text length
 ```
 
-The ratio is shown as a compact number, with the calculation available as supporting detail. A ratio near `1.00` means that the interaction cost was close to the final text length; higher values mean more interaction was spent around the message.
+The ratio is displayed in a compact form, with the calculation details available when useful. A ratio close to `1.00` means that the interaction cost was close to the final text length. The higher it is, the more actions were required around the message.
 
-The scoring system is still experimental and is **not deployed to production yet**. Its formula may change before it becomes a stable public feature. It should not be used to compare people or infer anything serious from a message.
+The pain ratio is still experimental and **has not been deployed as a stabilized public feature**. Its formula may evolve; the aim is to give it a more concrete and readable form over time.
 
 ## Security model
 
-The security goal is modest: make the server the authority for publishing, limit cheap abuse, and avoid trusting values supplied by the browser.
+The goal is deliberately simple: make the server authoritative for publishing, limit straightforward abuse, and never trust values supplied by the browser.
 
-- Auth.js protects account-owned operations through Discord sign-in.
-- `AUTH_SECRET` signs authentication state and is server-only.
-- `WRITE_RUN_SECRET` signs write-run tokens and hashes. Token signatures use HMAC-SHA-256 and are compared with a timing-safe comparison.
-- Write runs expire, have bounded operation and consumption limits, and can only be committed once.
-- The commit endpoint validates the JSON shape, body size, operation count, final text, and replay result.
-- Commit requests are rate-limited per authenticated user.
-- Public message IDs are random short IDs rather than database UUIDs.
-- Cron endpoints require `Authorization: Bearer <CRON_SECRET>` and fail closed without it.
-- Security headers include frame protection, MIME sniffing protection, a restrictive referrer policy, and production HSTS.
-- Account export and deletion require an authenticated session.
-- Reports are anonymous and rate-limited. Discord receives only a neutral notification; the reporter's account and message content stay out of the webhook.
+- Auth.js protects account-related operations through Discord sign-in.
+- `AUTH_SECRET` signs authentication state and remains server-side.
+- `WRITE_RUN_SECRET` signs writing-session tokens and fingerprints. Signatures use HMAC-SHA-256 and a timing-resistant comparison.
+- Writing sessions expire, have operation and consumed-character limits, and can only be published once.
+- The commit route validates the JSON structure, body size, operation count, final text, and replay result.
+- Commits are rate-limited per authenticated user.
+- Public message identifiers are short random IDs, separate from internal UUIDs.
+- Public routes do not return an account directory. Accounts without published messages do not have a public author page.
+- Feed updates go through the public API and polling; internal author UUIDs are not sent to the browser through a real-time stream.
+- Scheduled-task routes require `Authorization: Bearer <CRON_SECRET>` and reject requests without that secret.
+- Security headers provide, among other protections, iframe restrictions, MIME-sniffing protection, a restrictive referrer policy, and HSTS in production.
+- Data export and account deletion require an authenticated session.
+- Reports are anonymous and rate-limited to prevent abuse. Technical notifications do not contain the reporter's identity or the message content.
 
-This is protection against ordinary tampering and accidental abuse, not a claim of invulnerability. In particular, the in-memory rate limiter is not a perfect global limiter across multiple serverless instances. A larger deployment would move that state to a shared store.
+This model protects against ordinary manipulation and obvious abuse; it does not claim to make the application invulnerable. In particular, in-memory rate limiting is not a perfect global limit when the application runs on multiple instances. A larger deployment could move that state to shared storage.
 
-## A friendly threat model
+## A few fun scenarios
 
-The fun part is imagining the tiny dishonest scripts someone might write:
+The project lends itself to a few local experiments, as long as they are understood as process tests rather than ways to access the database:
 
-- change `finalText` after the run;
-- invent a cheaper operation history;
-- replay a token twice;
-- replace the seed;
-- send 8,001 operations;
-- call the cron URL directly;
-- pretend that a browser header identifies them.
+- change a message URL: this only requests another public identifier; the server returns a public message or a generic response if the identifier does not exist;
+- open the browser console or write a small script to send a fabricated `commit`: the server checks the token, session, seed, history, and final text;
+- generate a long sequence and then replace `finalText` with a text of your choice: server-side replay detects the mismatch and rejects the publication;
+- delete characters and write again: deletions change the visible text, but do not rewind the consumed history;
+- wait for a generated sequence to happen to produce the characters you want: this is theoretically possible within the intended limits, but it is not a bypass; the text is accepted only if it actually matches the sequence;
+- send 8,001 operations: the server rejects the request before publication; 8,000 is a per-session limit, not a user limit;
+- call a scheduled-task route directly or provide a fake browser-controlled ID in a header: the cron secret is mandatory, and an arbitrary browser ID is not accepted as proof of identity.
 
-Those are useful thought experiments because each one maps to a concrete server-side check. The browser can try to tell a more flattering story; the verifier replays the boring one.
+These scenarios are useful because they show the boundary between changing the browser and getting a publication accepted. The client can rewrite the URL, modify its local JavaScript, or send a custom request; it can publish only what the server can replay and validate.
 
-Please keep experiments in a local database or a dedicated test deployment. Do not probe the production service, attempt to recover secrets, or use the ideas above to bypass another person’s account or data. “Could this be fooled?” is a good development question; “let’s try it against production” is a different activity.
+Experiments should stay on a local database or a dedicated test environment. Do not probe production, try to recover secrets, or attempt to bypass another person's account or data. “Could this system be fooled?” is a good development question. “Let's try it on production” is a different one.
 
-## Data and retention rules
+## Data retention
 
-- Messages published by an account are retained indefinitely unless the account owner deletes all their data.
-- An account that has never published a message can be removed automatically after 30 days.
-- An account that has published at least one message is not removed merely because it later becomes inactive.
-- The cleanup cron never deletes published messages.
-- Account deletion exports the account and its messages as JSON, then deletes the account and related data after confirmation.
-- A report does not delete or publish a message. Report records retain the message ID, a message snapshot, the reported account ID/name, and optional context. They may be retained indefinitely in the application's moderation queue for safety and moderation.
+- Published messages are kept indefinitely, unless their author requests complete data deletion.
+- An account that has never published a message may be automatically deleted after 30 days.
+- An account that has published at least one message is not deleted merely because it becomes inactive.
+- Automatic cleanup never deletes published messages.
+- Account deletion generates a JSON export of the account's data and messages, then deletes the account and related data after confirmation.
+- A report does not delete the message. It keeps the message ID, a copy of its content, the reported account ID, its public name and tag, and the supplied context. These items may be retained indefinitely in the private moderation queue.
 
 ## Anonymous reports
 
-The flag action is available without signing in. It stores a moderation record in the database containing:
+The report button is available without signing in. The database stores:
 
-- the reported message ID;
-- a snapshot of the reported message content;
-- the reported account ID and public name/tag;
-- optional context entered by the reporter.
+- the ID of the reported message;
+- a copy of its content;
+- the ID of the related account, along with its public name and tag;
+- any context supplied with the report.
 
-The reporter's Discord account, session, and identity are not stored with the report. The server uses a request-derived identifier only for a short in-memory rate limit, so anonymous reporting does not mean unlimited reporting. The snapshot remains available to an authorized moderator even if the original message relation is later unavailable.
+The reporter's Discord account, session, and identity are not stored with the report. The server uses only a request-derived identifier for temporary in-memory rate limiting: anonymous does not mean unlimited.
 
-The webhook is a secret credential used only as a notification bell. Never put it in client code, never prefix it with `NEXT_PUBLIC_`, and rotate it immediately if it is exposed. Keep the moderation channel private and review reports rather than treating the notification as an automatic verdict.
+The report snapshot remains available to an authorized moderator even if the relationship with the original message later becomes unavailable.
 
-## Scheduled jobs
+Any webhook is a private server-side credential. It must never be placed in client code, prefixed with `NEXT_PUBLIC_`, or shared publicly.
 
-`vercel.json` defines two production Vercel Cron Jobs, both daily and in UTC:
+## Scheduled tasks
 
-- `23:45 UTC`: records one idempotent row in `DailyUptime`.
-- `03:15 UTC`: removes accounts older than 30 days that have never published a message.
+The repository configuration defines two daily tasks, run in UTC:
 
-Both endpoints are technically reachable as URLs, but they are not public operations: without `CRON_SECRET` they return `401` and do not touch the database.
+- `23:45 UTC`: records one idempotent daily activity row in `DailyUptime`;
+- `03:15 UTC`: deletes accounts older than 30 days that have never published a message.
 
-## Routes worth knowing
+These routes are technically reachable by URL, but they are not public operations: without `CRON_SECRET`, they return `401` and do not touch the database.
 
-| Route | Role |
+## Useful routes
+
+| Route | Purpose |
 | --- | --- |
 | `/` | Write a new message. |
+| `/about` | Project overview. |
 | `/message/[id]` | Public message page. |
 | `/[tag]` | Public author page. |
-| `/api/write-run/start` | Start a server-tracked write run. |
-| `/api/write-run/commit` | Verify and publish a completed run. |
-| `/api/account/export` | Download the signed-in user's data. |
-| `/api/account/delete` | Delete the signed-in user's account and data. |
-| `/api/messages/report` | Create an anonymous report and queue a neutral notification. |
-| `/moderation` | Private moderation queue for authorized Discord accounts. |
-| `/robots.txt` | Generated crawler rules. |
-| `/sitemap.xml` | Generated sitemap for public static pages. |
+| `/legal` | Rules and terms of use. |
+| `/privacy` | Stored data and user rights. |
+| `/api/write-run/start` | Create a writing session. |
+| `/api/write-run/commit` | Validate and publish a completed session. |
+| `/api/account/export` | Download your data. |
+| `/api/account/delete` | Delete your account and data. |
+| `/api/messages/report` | Report a message anonymously. |
+| `/moderation` | Private moderation queue. |
+| `/robots.txt` | Search-engine crawler rules. |
+| `/sitemap.xml` | Public-page sitemap. |
 
-## Deployment notes
+## Official instance
 
-The app is designed for Vercel with PostgreSQL/Supabase and uses the `fra1` region in `vercel.json`. Vercel Cron Jobs run on production deployments, not preview deployments. After changing environment variables or `vercel.json`, deploy again and check the Cron Jobs and Function logs in Vercel.
+This repository contains the project code and general configuration. The official public instance is available at [fortuitaconsilia.online](https://fortuitaconsilia.online).
 
-The project is open source. If you clone it, leave `NEXT_PUBLIC_PERSONAL_PAGE_URL` and `NEXT_PUBLIC_SITE_URL` unset until you have your own values.
+Its main public information pages are available here:
 
-## Project status
+- [About](https://fortuitaconsilia.online/about);
+- [Terms of use](https://fortuitaconsilia.online/legal);
+- [Privacy](https://fortuitaconsilia.online/privacy).
 
-This is an evolving experiment rather than a finished security product. The UI is deliberately spare, the score is still provisional, and the most valuable future additions would be a small automated test suite around the write-run verifier, deletion rules, and API authorization.
+These texts describe the official instance, its data, and its rules. A clone of the repository can adapt them to its own operation. The official instance's database, accounts, secrets, and data are not part of this repository.
+
+If you clone the project, provide your own values for `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_PERSONAL_PAGE_URL`.
+
+## License and project spirit
+
+The project is distributed under the MIT License. You can read it, reuse it, modify it, host it elsewhere, and write your own scripts around it.
+
+Fortuita Consilia remains an evolving experiment: the interface is intentionally quiet, the verification model is readable, and the pain ratio may take a more concrete form over time.
