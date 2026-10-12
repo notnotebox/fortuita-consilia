@@ -4,8 +4,6 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { CustomScrollArea } from "@/components/custom-scroll-area";
 import { MessageCard, type Message } from "@/components/message-card";
-import { toPublicMessageId } from "@/lib/message-metrics";
-import { getRealtimeClient } from "@/lib/realtime/client";
 import { getUserTag } from "@/lib/user-tag";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +11,7 @@ const PAGE_SIZE = 10;
 
 export type MessageListSource =
   | { kind: "all" }
-  | { kind: "author"; authorId: string }
+  | { kind: "author"; authorTag: string }
   | { kind: "single"; messageId: string };
 
 type MessageListProps = {
@@ -55,7 +53,7 @@ async function fetchMessages(
   }
 
   const params = new URLSearchParams({ skip: String(skip), take: String(take) });
-  if (source.kind === "author") params.set("authorId", source.authorId);
+  if (source.kind === "author") params.set("authorTag", source.authorTag);
 
   try {
     const response = await fetch(`/api/messages?${params}`, {
@@ -77,7 +75,7 @@ async function fetchMessages(
 }
 
 function getSourceKey(source: MessageListSource) {
-  if (source.kind === "author") return `author:${source.authorId}`;
+  if (source.kind === "author") return `author:${source.authorTag}`;
   if (source.kind === "single") return `single:${source.messageId}`;
   return source.kind;
 }
@@ -101,15 +99,15 @@ export function MessageList({
     [session?.user],
   );
   const sourceKey = getSourceKey(source);
-  const sourceAuthorId = source.kind === "author" ? source.authorId : undefined;
+  const sourceAuthorTag = source.kind === "author" ? source.authorTag : undefined;
   const sourceMessageId = source.kind === "single" ? source.messageId : undefined;
   const stableSource = React.useMemo<MessageListSource>(
     () => {
-      if (source.kind === "author") return { kind: "author", authorId: sourceAuthorId! };
+      if (source.kind === "author") return { kind: "author", authorTag: sourceAuthorTag! };
       if (source.kind === "single") return { kind: "single", messageId: sourceMessageId! };
       return { kind: "all" };
     },
-    [source.kind, sourceAuthorId, sourceMessageId],
+    [source.kind, sourceAuthorTag, sourceMessageId],
   );
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = React.useState(source.kind !== "single" && initialMessages.length === 0);
@@ -231,33 +229,6 @@ export function MessageList({
 
   React.useEffect(() => {
     if (stableSource.kind === "single") return;
-    const supabase = getRealtimeClient();
-
-    const onCreated = async (payload: { new: Record<string, unknown> }) => {
-      const id = typeof payload.new.id === "string" ? payload.new.id : null;
-      const shortId = typeof payload.new.shortId === "string" ? payload.new.shortId : null;
-      const authorId = typeof payload.new.authorId === "string" ? payload.new.authorId : null;
-      if (!id || !shortId || pendingDeleteIdsRef.current.has(id)) return;
-      if (stableSource.kind === "author" && authorId !== stableSource.authorId) return;
-
-      const response = await fetch(`/api/messages/${toPublicMessageId(shortId)}`);
-      if (response.ok) addCreatedMessage((await response.json()) as Message);
-    };
-
-    const onDeleted = (payload: { old: Record<string, unknown> }) => {
-      const id = typeof payload.old.id === "string" ? payload.old.id : null;
-      if (!id) return;
-      pendingDeleteIdsRef.current.delete(id);
-      loadedIdsRef.current.delete(id);
-      setMessages((previous) => previous.filter((message) => message.id !== id));
-    };
-
-    const channel = supabase
-      ?.channel(`messages-${sourceKey}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "Message" }, onCreated)
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "Message" }, onDeleted)
-      .subscribe();
-
     const pollTimer = window.setInterval(async () => {
       const latest = await fetchMessages(stableSource, 0, PAGE_SIZE);
       for (const message of [...latest].reverse()) addCreatedMessage(message);
@@ -265,9 +236,8 @@ export function MessageList({
 
     return () => {
       window.clearInterval(pollTimer);
-      if (channel && supabase) void supabase.removeChannel(channel);
     };
-  }, [addCreatedMessage, sourceKey, stableSource]);
+  }, [addCreatedMessage, stableSource]);
 
   const handleDelete = React.useCallback(async (messageId: string) => {
     pendingDeleteIdsRef.current.add(messageId);

@@ -19,9 +19,6 @@ const DEFAULT_TAKE = 10;
 const MAX_TAKE = 20;
 const MAX_SKIP = 1000;
 const MESSAGE_READS_PER_MINUTE = 120;
-const UUID_V4_LIKE_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function parseBoundedInt(
   raw: string | null,
   options: { fallback: number; min: number; max: number }
@@ -97,15 +94,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const authorIdParam = searchParams.get("authorId");
-    if (authorIdParam && !UUID_V4_LIKE_REGEX.test(authorIdParam)) {
+    const authorTagParam = searchParams.get("authorTag")?.trim() || null;
+    if (authorTagParam && authorTagParam.length > 100) {
       return NextResponse.json(
-        { error: "Invalid authorId format." },
+        { error: "Invalid author tag." },
         { status: 400 }
       );
     }
 
-    const authorId = authorIdParam || undefined;
+    let authorId: string | undefined;
+    if (authorTagParam) {
+      const authors = await prisma.user.findMany({
+        where: { messages: { some: {} } },
+        select: { id: true, name: true, discordTag: true },
+      });
+      const author = authors.find((candidate) => getUserTag(candidate) === authorTagParam);
+      if (!author) return NextResponse.json([]);
+      authorId = author.id;
+    }
 
     const messages = await prisma.message.findMany({
       orderBy: { createdAt: "desc" },
@@ -125,7 +131,6 @@ export async function GET(request: NextRequest) {
           select: {
             name: true,
             discordTag: true,
-            email: true,
             image: true,
           },
         },
@@ -147,7 +152,7 @@ export async function GET(request: NextRequest) {
           content: msg.content,
           ratio: metrics.ratioLabel,
           ratioDetails: metrics.ratioDetails,
-          pseudo: msg.author?.name || msg.author?.email?.split("@")[0] || "Unknown",
+          pseudo: msg.author?.name || "Unknown",
           avatar: msg.author?.image,
           authorTag: getUserTag(msg.author ?? {}),
           // Expose owner id only for the current user's own messages.

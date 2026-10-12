@@ -1,3 +1,18 @@
+M  .env.example
+UU README.md
+M  app/[tag]/[id]/page.tsx
+M  app/[tag]/page.tsx
+M  app/api/messages/[id]/route.ts
+M  app/api/messages/report/route.ts
+M  app/api/messages/route.ts
+M  app/globals.css
+M  app/message/[id]/page.tsx
+M  components/message-list.tsx
+D  lib/realtime/client.ts
+M  lib/user-tag.ts
+M  package.json
+M  pnpm-lock.yaml
+?? rewrite-rebase-todo.ps1
 # Fortuita Consilia
 
 Fortuita Consilia is an open-source writing experiment, built for reasons that do not necessarily need explaining.

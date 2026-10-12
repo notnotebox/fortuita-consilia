@@ -18,9 +18,8 @@ export function normalizeUserTag(value: string): string {
 export function getUserTag(user: UserTagSource): string {
   const discordTag = user.discordTag?.trim();
   const name = user.name?.trim();
-  const emailName = user.email?.split("@")[0]?.trim();
   const idPrefix = user.id?.slice(0, 8);
-  const raw = discordTag || name || emailName || idPrefix || "user";
+  const raw = discordTag || name || idPrefix || "user";
 
   const normalized = normalizeUserTag(raw);
   const baseTag = normalized || (idPrefix ? normalizeUserTag(idPrefix) : "user");

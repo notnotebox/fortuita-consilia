@@ -90,7 +90,6 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
           select: {
             name: true,
             discordTag: true,
-            email: true,
             image: true,
           },
         },
@@ -115,7 +114,7 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       content: message.content,
       ratio: metrics.ratioLabel,
       ratioDetails: metrics.ratioDetails,
-      pseudo: message.author?.name || message.author?.email?.split("@")[0] || "Unknown",
+      pseudo: message.author?.name || "Unknown",
       avatar: message.author?.image,
       authorTag: getUserTag(message.author ?? {}),
       userId:

@@ -20,7 +20,7 @@ export async function generateMetadata({
   const { tag } = await params;
   const users = await prisma.user.findMany({
     where: { messages: { some: {} } },
-    select: { name: true, email: true },
+    select: { id: true, name: true, discordTag: true },
   });
   const author = users.find((user) => getUserTag(user) === tag);
 
@@ -31,7 +31,7 @@ export async function generateMetadata({
     };
   }
 
-  const pseudo = author.name || author.email?.split("@")[0] || "Unknown";
+  const pseudo = author.name || "Unknown";
   return {
     title: `${pseudo} — Author`,
     description: `Published messages by ${pseudo} on Fortuita Consilia.`,
@@ -76,7 +76,6 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
       id: true,
       name: true,
       discordTag: true,
-      email: true,
       image: true,
     },
   });
@@ -84,7 +83,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
   const author = users.find((user) => getUserTag(user) === tag);
   if (!author) return <UnavailableAuthorPage />;
 
-  const pseudo = author.name || author.email?.split("@")[0] || "Unknown";
+  const pseudo = author.name || "Unknown";
   const initials = pseudo.slice(0, 2).toUpperCase();
   const displayTag = author.discordTag || tag.replace(/-/g, ".");
   const isLongTag = displayTag.length > 14;
@@ -197,7 +196,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
 
       <div className="min-h-0 flex-1 bg-background">
           <MessageList
-            source={{ kind: "author", authorId: author.id }}
+            source={{ kind: "author", authorTag: tag }}
             initialMessages={messages}
             totalCount={totalMessages}
             layout="author"
